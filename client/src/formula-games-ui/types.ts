@@ -11,17 +11,20 @@ export type SessionPhase   = 'playing' | 'result' | 'ended';
 export type FormulaNotation = 'mathematical' | 'text' | 'c';
 
 export interface FormulaGameSessionProps {
-  gameType:      GameType;
-  mode:          'solo' | 'online';
-  difficulty:    Difficulty;
-  onSessionEnd:  (finalScore: number) => void;
+  gameType:       GameType;
+  mode:           'solo' | 'online';
+  difficulty:     Difficulty;
+  onSessionEnd:   (finalScore: number) => void;
   /** Called when the player clicks "Play Again" in the end screen. Optional —
    *  if omitted the session restarts internally without notifying the parent. */
-  onPlayAgain?:  () => void;
-  playerName:    string;
+  onPlayAgain?:   () => void;
+  /** Called when the player clicks "Back to Menu" — navigates to the last
+   *  menu screen before the game (e.g. difficulty selection). */
+  onBackToMenu?:  () => void;
+  playerName:     string;
   // Online-only
-  socket?:       WebSocket;
-  opponentName?: string;
+  socket?:        WebSocket;
+  opponentName?:  string;
 }
 
 export interface RoundResultInfo {

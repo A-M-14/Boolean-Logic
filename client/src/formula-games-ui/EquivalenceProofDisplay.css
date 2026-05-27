@@ -5,34 +5,34 @@
   flex-direction: column;
   gap:            0.75rem;
   padding:        1.25rem 1.5rem;
-  background:     #f5f0ff;
-  border:         1px solid #c8b8f0;
+  background:     #160d28;
+  border:         1px solid #2d2a50;
   border-radius:  8px;
   max-width:      800px;
   width:          100%;
 }
 
-.equivalence-proof--counter  { background: #fff5f5; border-color: #f0b8b8; }
-.equivalence-proof--fallback { background: #fffbf0; border-color: #e8d870; }
-.equivalence-proof--trivial  { background: #f0fff4; border-color: #b8e8c8; }
+.equivalence-proof--counter  { background: #250d1a; border-color: #f472b64d; }
+.equivalence-proof--fallback { background: #1a180d; border-color: #a78bfa4d; }
+.equivalence-proof--trivial  { background: #0d2520; border-color: #64ffda4d; }
 
 .equivalence-proof-title {
   margin:      0;
   font-size:   1.1rem;
   font-weight: 700;
-  color:       #3a1a80;
+  color:       #a78bfa;
 }
 
-.equivalence-proof--counter  .equivalence-proof-title { color: #801a1a; }
-.equivalence-proof--fallback .equivalence-proof-title { color: #806010; }
-.equivalence-proof--trivial  .equivalence-proof-title { color: #1a6a30; }
+.equivalence-proof--counter  .equivalence-proof-title { color: #f472b6; }
+.equivalence-proof--fallback .equivalence-proof-title { color: #a78bfa; }
+.equivalence-proof--trivial  .equivalence-proof-title { color: #64ffda; }
 
 .equivalence-proof-hint,
 .equivalence-proof-fallback-note,
 .equivalence-proof-trivial-note {
   margin:    0;
   font-size: 0.85rem;
-  color:     #555;
+  color:     #64748b;
 }
 
 /* ─── Counterexample ───────────────────────────────────────────────────────── */
@@ -41,13 +41,13 @@
   margin:      0;
   font-weight: 600;
   font-size:   0.9rem;
-  color:       #555;
+  color:       #94a3b8;
 }
 
 .equivalence-proof-counter-note {
   margin:    0;
   font-size: 0.85rem;
-  color:     #888;
+  color:     #64748b;
 }
 
 /* Two eval blocks side by side, wrapping on narrow screens */
@@ -69,7 +69,7 @@
   margin:         0;
   font-size:      0.8rem;
   font-weight:    700;
-  color:          #555;
+  color:          #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -91,7 +91,7 @@
 
 .equivalence-chain-first {
   padding-bottom: 0.3rem;
-  border-bottom:  1px solid rgba(0,0,0,0.07);
+  border-bottom:  1px solid #2d2a50;
   margin-bottom:  0.05rem;
 }
 
@@ -100,8 +100,8 @@
 .chain-anchor {
   font-size:     0.72rem;
   font-weight:   700;
-  color:         #9a6acc;
-  border:        1px solid #c8b0e8;
+  color:         #a78bfa;
+  border:        1px solid #a78bfa4d;
   border-radius: 3px;
   padding:       0.05rem 0.28rem;
   flex-shrink:   0;
@@ -110,14 +110,14 @@
 }
 
 .chain-anchor-b {
-  color:        #2a7a2a;
-  border-color: #9ad8aa;
+  color:        #64ffda;
+  border-color: #64ffda4d;
 }
 
 .chain-eq-sign {
   font-size:   1.15rem;
   font-weight: 700;
-  color:       #7a5aaa;
+  color:       #a78bfa;
   font-family: 'Georgia', serif;
   flex-shrink: 0;
   min-width:   1.1rem;
@@ -139,7 +139,7 @@
   gap:         0.2rem;
   flex-wrap:   wrap;
   font-size:   0.78rem;
-  color:       #777;
+  color:       #64748b;
   font-weight: 500;
   flex-shrink: 0;
   align-self:  center;
@@ -149,7 +149,7 @@
   display:     inline-flex;
   align-items: baseline;
   gap:         0.2rem;
-  color:       #999;
+  color:       #2d2a50;
   font-style:  italic;
 }
 

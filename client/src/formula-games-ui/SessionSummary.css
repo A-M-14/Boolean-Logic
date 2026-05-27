@@ -4,12 +4,25 @@
   align-items:    center;
   gap:            2rem;
   padding:        2rem;
+  min-height:     100vh;
+  background:     radial-gradient(ellipse at 50% -10%, #1e1660 0%, #0d0b1e 60%);
+  color:          #e2e8f0;
+}
+
+.summary-top-bar {
+  width:     100%;
+  display:   flex;
+  align-self: flex-start;
 }
 
 .summary-title {
-  font-size:   2.5rem;
-  margin:      0;
-  font-weight: bold;
+  font-size:               2.5rem;
+  margin:                  0;
+  font-weight:             800;
+  background:              linear-gradient(135deg, #64ffda 0%, #a78bfa 50%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip:         text;
 }
 
 .summary-score-block {
@@ -21,7 +34,7 @@
 
 .summary-score-label {
   font-size:      1rem;
-  color:          #666;
+  color:          #64748b;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -29,7 +42,7 @@
 .summary-score-value {
   font-size:   3.5rem;
   font-weight: bold;
-  color:       #1a6bb5;
+  color:       #64ffda;
 }
 
 .summary-scores-row {
@@ -47,23 +60,37 @@
 
 .summary-player-name {
   font-size: 1rem;
-  color:     #555;
+  color:     #94a3b8;
 }
 
 .summary-player-score {
   font-size:   2.5rem;
   font-weight: bold;
-  color:       #444;
+  color:       #e2e8f0;
 }
 
-.summary-player.winner .summary-player-score { color: #2a7a2a; }
+.summary-player.winner .summary-player-score { color: #64ffda; }
 
 .summary-vs {
   font-size: 1rem;
-  color:     #bbb;
+  color:     #2d2a50;
 }
 
 /* ─── Rounds table ─────────────────────────────────────────────────────────── */
+
+.summary-table-wrapper {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            0.5rem;
+}
+
+.summary-review-hint {
+  font-size:   1rem;
+  font-weight: 600;
+  color:       #64748b;
+  margin:      0;
+}
 
 .summary-rounds-table {
   border-collapse: collapse;
@@ -78,15 +105,15 @@
 }
 
 .summary-rounds-table thead tr {
-  border-bottom: 2px solid #ccc;
-  color:         #555;
-  font-size:     0.9rem;
+  border-bottom:  2px solid #2d2a50;
+  color:          #94a3b8;
+  font-size:      0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .summary-rounds-table tbody tr {
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #1e1b3a;
 }
 
 .summary-rounds-table tbody tr.row-clickable {
@@ -95,18 +122,11 @@
 }
 
 .summary-rounds-table tbody tr.row-clickable:hover {
-  background: #f0f4ff;
+  background: #1e1b3a;
 }
 
-.summary-rounds-table .row-review-link {
-  color:       #1a6bb5;
-  font-size:   0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.summary-rounds-table tbody tr.row-correct  td:last-child { color: #2a7a2a; font-weight: bold; }
-.summary-rounds-table tbody tr.row-incorrect td:last-child { color: #a00000; font-weight: bold; }
+.summary-rounds-table tbody tr.row-correct  td:last-child { color: #64ffda; font-weight: bold; }
+.summary-rounds-table tbody tr.row-incorrect td:last-child { color: #f472b6; font-weight: bold; }
 
 /* ─── Actions ──────────────────────────────────────────────────────────────── */
 
@@ -116,16 +136,33 @@
 }
 
 .summary-button {
-  padding:       0.8rem 2.4rem;
-  font-size:     1.1rem;
-  font-weight:   bold;
-  border:        none;
-  border-radius: 6px;
+  padding:       0.7rem 2.4rem;
+  font-size:     1rem;
+  font-weight:   600;
+  border-radius: 8px;
   cursor:        pointer;
-  transition:    opacity 0.15s;
+  font-family:   inherit;
+  transition:    background 0.15s, box-shadow 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.summary-button:hover { opacity: 0.85; }
+.summary-button.primary {
+  background: none;
+  border:     1.5px solid #64ffda;
+  color:      #64ffda;
+}
 
-.summary-button.primary   { background: #1a6bb5; color: #fff; }
-.summary-button.secondary { background: #e0e0e0; color: #333; }
+.summary-button.primary:hover {
+  background: #64ffda15;
+  box-shadow: 0 4px 20px -4px #64ffda44;
+}
+
+.summary-button.secondary {
+  background: #1e1b3a;
+  border:     1px solid #2d2a50;
+  color:      #94a3b8;
+}
+
+.summary-button.secondary:hover {
+  border-color: #64748b;
+  color:        #e2e8f0;
+}

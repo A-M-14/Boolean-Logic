@@ -1,19 +1,21 @@
 .submit-btn {
-  padding:       0.9rem 3rem;
-  font-size:     1.15rem;
-  font-weight:   bold;
-  border:        none;
-  border-radius: 6px;
-  background:    #1a6bb5;
-  color:         #fff;
-  cursor:        pointer;
+  padding:        0.9rem 3rem;
+  font-size:      1.15rem;
+  font-weight:    600;
+  border:         2px solid #64ffda;
+  border-radius:  8px;
+  background:     none;
+  color:          #64ffda;
+  cursor:         pointer;
   letter-spacing: 0.04em;
-  transition:    opacity 0.15s, transform 0.1s;
+  font-family:    inherit;
+  transition:     background 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.1s;
 }
 
 .submit-btn:hover:not(:disabled) {
-  opacity:   0.85;
-  transform: translateY(-1px);
+  background: #64ffda15;
+  box-shadow: 0 4px 20px -4px #64ffda44;
+  transform:  translateY(-1px);
 }
 
 .submit-btn:active:not(:disabled) { transform: translateY(0); }

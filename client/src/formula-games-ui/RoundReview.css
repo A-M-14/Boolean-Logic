@@ -6,15 +6,15 @@
   width:          100%;
   box-sizing:     border-box;
   min-height:     100vh;
+  background:     radial-gradient(ellipse at 50% -10%, #1e1660 0%, #0d0b1e 60%);
+  color:          #e2e8f0;
 }
 
 /* ─── Notation bar ─────────────────────────────────────────────────────────── */
 
 .round-review-notation-bar {
-  display:         flex;
-  gap:             0.75rem;
-  align-items:     flex-start;
-  justify-content: center;
+  display:     flex;
+  align-items: center;
 }
 
 /* ─── Header ───────────────────────────────────────────────────────────────── */
@@ -30,20 +30,24 @@
   padding:       0.45rem 1rem;
   font-size:     0.9rem;
   font-weight:   600;
-  background:    #e8e8e8;
-  border:        none;
+  background:    #1e1b3a;
+  border:        1px solid #2d2a50;
   border-radius: 6px;
   cursor:        pointer;
-  color:         #333;
-  transition:    background 0.15s;
+  color:         #94a3b8;
+  font-family:   inherit;
+  transition:    border-color 0.15s, color 0.15s;
 }
 
-.round-review-back-button:hover { background: #d4d4d4; }
+.round-review-back-button:hover {
+  border-color: #64748b;
+  color:        #e2e8f0;
+}
 
 .round-review-title {
   font-size:   1.15rem;
   font-weight: 600;
-  color:       #444;
+  color:       #e2e8f0;
   flex:        1;
 }
 
@@ -55,13 +59,15 @@
 }
 
 .round-review-badge.badge-correct {
-  background: #d4edda;
-  color:      #1a5c2a;
+  background: #0d2520;
+  color:      #64ffda;
+  border:     1px solid #64ffda4d;
 }
 
 .round-review-badge.badge-wrong {
-  background: #fde8e8;
-  color:      #8a0000;
+  background: #250d1a;
+  color:      #f472b6;
+  border:     1px solid #f472b64d;
 }
 
 /* ─── Formula area ─────────────────────────────────────────────────────────── */
@@ -86,15 +92,15 @@
 }
 
 .round-review-equals-sign {
-  color:       #555;
+  color:       #64748b;
   font-weight: bold;
 }
 
 .round-review-blank {
   font-size:     1.6rem;
-  color:         #aaa;
+  color:         #2d2a50;
   font-style:    italic;
-  border-bottom: 2px solid #ccc;
+  border-bottom: 2px solid #2d2a50;
   min-width:     1.5rem;
   text-align:    center;
 }
@@ -112,16 +118,51 @@
   padding:       0.65rem 2rem;
   font-size:     1rem;
   font-weight:   600;
-  border:        2px solid #0f766e;
-  border-radius: 6px;
-  background:    #fff;
-  color:         #0f766e;
+  border:        2px solid #64ffda;
+  border-radius: 8px;
+  background:    none;
+  color:         #64ffda;
   cursor:        pointer;
-  transition:    background 0.15s, color 0.15s;
+  font-family:   inherit;
+  transition:    background 0.15s, box-shadow 0.15s;
 }
 
 .round-review-solution-button:hover,
 .round-review-solution-button.active {
-  background: #0f766e;
-  color:      #fff;
+  background: #64ffda15;
+  box-shadow: 0 4px 16px -4px #64ffda33;
+}
+
+.round-review-action-buttons {
+  display:         flex;
+  gap:             0.75rem;
+  flex-wrap:       wrap;
+  justify-content: center;
+}
+
+.round-review-truth-table-button {
+  padding:       0.65rem 2rem;
+  font-size:     1rem;
+  font-weight:   600;
+  border:        2px solid #a78bfa;
+  border-radius: 8px;
+  background:    none;
+  color:         #a78bfa;
+  cursor:        pointer;
+  font-family:   inherit;
+  transition:    background 0.15s, box-shadow 0.15s;
+}
+
+.round-review-truth-table-button:hover,
+.round-review-truth-table-button.active {
+  background: #a78bfa15;
+  box-shadow: 0 4px 16px -4px #a78bfa33;
+}
+
+.round-review-truth-tables-row {
+  display:         flex;
+  gap:             2.5rem;
+  flex-wrap:       wrap;
+  justify-content: center;
+  align-items:     flex-start;
 }

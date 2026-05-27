@@ -10,17 +10,19 @@
   padding:        0.5rem 1rem;
   font-size:      0.88rem;
   font-weight:    500;
-  border:         none;
+  border:         1px solid #2d2a50;
   border-radius:  6px;
-  background:     #0f766e;
-  color:          #fff;
+  background:     #1e1b3a;
+  color:          #94a3b8;
   cursor:         pointer;
   white-space:    nowrap;
-  transition:     background 0.1s;
+  font-family:    inherit;
+  transition:     border-color 0.15s, color 0.15s;
 }
 
 .notation-selector-button:hover {
-  background: #0c6560;
+  border-color: #a78bfa;
+  color:        #a78bfa;
 }
 
 .notation-selector-chevron {
@@ -38,10 +40,10 @@
   top:              calc(100% + 4px);
   left:             0;
   min-width:        180px;
-  background:       #fff;
-  border:           1px solid #ccc;
+  background:       #1e1b3a;
+  border:           1px solid #2d2a50;
   border-radius:    6px;
-  box-shadow:       0 4px 14px rgba(0, 0, 0, 0.12);
+  box-shadow:       0 4px 14px rgba(0, 0, 0, 0.4);
   z-index:          200;
   overflow:         hidden;
   transform-origin: top center;
@@ -61,16 +63,17 @@
   justify-content: space-between;
   padding:         0.6rem 1rem;
   font-size:       0.88rem;
+  color:           #e2e8f0;
   cursor:          pointer;
   transition:      background 0.1s;
 }
 
 .notation-selector-option:hover {
-  background: #f0f4ff;
+  background: #2d2a50;
 }
 
 .notation-selector-check {
-  color:      #1a6bb5;
+  color:      #64ffda;
   font-size:  0.85rem;
   min-width:  1rem;
   text-align: right;

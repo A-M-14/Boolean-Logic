@@ -4,22 +4,24 @@ import './SessionSummary.css';
 
 type SessionSummaryProps =
   | {
-      mode:           'solo';
-      finalScore:     number;
-      roundHistory:   RoundRecord[];
-      onPlayAgain:    () => void;
-      onMenu:         () => void;
-      onReviewRound?: (index: number) => void;
+      mode:            'solo';
+      finalScore:      number;
+      roundHistory:    RoundRecord[];
+      onPlayAgain:     () => void;
+      onMenu:          () => void;
+      onReviewRound?:  (index: number) => void;
+      onBackToMenu?:   () => void;
     }
   | {
-      mode:           'online';
-      finalScore:     number;
-      opponentScore:  number;
-      playerName:     string;
-      opponentName:   string;
-      roundHistory:   RoundRecord[];
-      onMenu:         () => void;
-      onReviewRound?: (index: number) => void;
+      mode:            'online';
+      finalScore:      number;
+      opponentScore:   number;
+      playerName:      string;
+      opponentName:    string;
+      roundHistory:    RoundRecord[];
+      onMenu:          () => void;
+      onReviewRound?:  (index: number) => void;
+      onBackToMenu?:   () => void;
     };
 
 function formatAnswer(record: RoundRecord): string {
@@ -36,7 +38,11 @@ function RoundsTable({
   onReviewRound?: (index: number) => void;
 }) {
   return (
-    <table className="summary-rounds-table">
+    <div className="summary-table-wrapper">
+      {onReviewRound !== undefined && (
+        <p className="summary-review-hint">Click on a round row to review it.</p>
+      )}
+      <table className="summary-rounds-table">
       <thead>
         <tr>
           <th>Round</th>
@@ -44,7 +50,6 @@ function RoundsTable({
           <th>Answer</th>
           <th>Points</th>
           <th>Result</th>
-          {onReviewRound !== undefined && <th></th>}
         </tr>
       </thead>
       <tbody>
@@ -60,13 +65,11 @@ function RoundsTable({
             <td>{formatAnswer(record)}</td>
             <td>{record.points}</td>
             <td>{record.correct ? '✓' : '✗'}</td>
-            {onReviewRound !== undefined && (
-              <td className="row-review-link">Review →</td>
-            )}
           </tr>
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -74,6 +77,11 @@ export function SessionSummary(props: SessionSummaryProps) {
   if (props.mode === 'solo') {
     return (
       <div className="session-summary">
+        {props.onBackToMenu !== undefined && (
+          <div className="summary-top-bar">
+            <button className="game-back-btn" onClick={props.onBackToMenu}>← Back to Menu</button>
+          </div>
+        )}
         <h2 className="summary-title">Session Complete</h2>
         <div className="summary-score-block">
           <span className="summary-score-label">Final Score</span>
@@ -97,6 +105,11 @@ export function SessionSummary(props: SessionSummaryProps) {
 
   return (
     <div className="session-summary">
+      {props.onBackToMenu !== undefined && (
+        <div className="summary-top-bar">
+          <button className="game-back-btn" onClick={props.onBackToMenu}>← Back to Menu</button>
+        </div>
+      )}
       <h2 className="summary-title">
         {draw ? 'Draw!' : playerWon ? 'You Win!' : 'You Lose!'}
       </h2>

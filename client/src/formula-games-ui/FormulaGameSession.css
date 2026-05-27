@@ -6,6 +6,8 @@
   width:          100%;
   box-sizing:     border-box;
   min-height:     100vh;
+  background:     radial-gradient(ellipse at 50% -10%, #1e1660 0%, #0d0b1e 60%);
+  color:          #e2e8f0;
 }
 
 .formula-game-session-header {
@@ -16,7 +18,7 @@
 
 .formula-game-session-round-label {
   font-size:   1.1rem;
-  color:       #555;
+  color:       #94a3b8;
   font-weight: 500;
 }
 
@@ -46,15 +48,13 @@
 }
 
 .formula-game-session-evaluation-equals-sign {
-  color:       #555;
+  color:       #64748b;
   font-weight: bold;
 }
 
 .formula-game-session-notation-bar {
-  display:         flex;
-  gap:             0.75rem;
-  align-items:     flex-start;
-  justify-content: center;
+  display:     flex;
+  align-items: center;
 }
 
 .formula-game-session-submit-row {
@@ -65,3 +65,4 @@
 .formula-game-session-draft {
   width: 100%;
 }
+

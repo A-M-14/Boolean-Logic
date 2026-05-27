@@ -33,7 +33,6 @@ export function NotationLegend() {
         <table className="notation-legend-table">
           <thead>
             <tr>
-              <th>Logic gate</th>
               <th>Mathematical</th>
               <th>Text</th>
               <th>C language</th>
@@ -41,25 +40,21 @@ export function NotationLegend() {
           </thead>
           <tbody>
             <tr>
-              <td>x or y</td>
               <td className="notation-legend-math">x + y</td>
               <td>x or y</td>
               <td>x | y</td>
             </tr>
             <tr>
-              <td>x and y</td>
               <td className="notation-legend-math">x · y</td>
               <td>x and y</td>
               <td>x &amp; y</td>
             </tr>
             <tr>
-              <td>x xor y</td>
               <td className="notation-legend-math">x ⊕ y</td>
               <td>x xor y</td>
               <td>x ^ y</td>
             </tr>
             <tr>
-              <td>not x</td>
               <td className="notation-legend-math"><span className="notation-legend-overline">x</span></td>
               <td>not(x)</td>
               <td>!x</td>

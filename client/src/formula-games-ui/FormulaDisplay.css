@@ -10,7 +10,7 @@
 .formula-label {
   font-size:   1rem;
   font-weight: bold;
-  color:       #555;
+  color:       #64748b;
   min-width:   1.2rem;
 }
 
@@ -20,7 +20,7 @@
 
 .formula-var {
   font-style: italic;
-  color:      #1a1a1a;
+  color:      #e2e8f0;
 }
 
 /* NOT gate: horizontal bar on top — standard boolean algebra overline notation.
@@ -37,5 +37,5 @@
 .formula-op {
   margin:     0 0.35em;
   font-style: normal;
-  color:      #333;
+  color:      #a78bfa;
 }

@@ -5,8 +5,8 @@
   flex-direction: column;
   gap:            0.6rem;
   padding:        1rem 1.25rem;
-  background:     #f0f7ff;
-  border:         1px solid #b8d4f0;
+  background:     #160d28;
+  border:         1px solid #2d2a50;
   border-radius:  8px;
   max-width:      800px;
   width:          100%;
@@ -16,7 +16,7 @@
   margin:      0;
   font-size:   1rem;
   font-weight: 700;
-  color:       #1a4a80;
+  color:       #a78bfa;
 }
 
 /* ─── Pane grid — wraps left-to-right ─────────────────────────────────────── */
@@ -35,36 +35,36 @@
   flex-direction: column;
   gap:            0.35rem;
   padding:        0.55rem 0.8rem;
-  background:     #ffffff;
-  border:         1.5px solid #c8d8f0;
+  background:     #1e1b3a;
+  border:         1.5px solid #2d2a50;
   border-radius:  8px;
   min-width:      140px;
 }
 
-.evaluation-pane.pane-true  { border-color: #7ec89a; background: #f2faf5; }
-.evaluation-pane.pane-false { border-color: #e8a8a8; background: #fdf4f4; }
+.evaluation-pane.pane-true  { border-color: #64ffda4d; background: #0d2520; }
+.evaluation-pane.pane-false { border-color: #f472b64d; background: #250d1a; }
 
 /* ─── Pane header ─────────────────────────────────────────────────────────── */
 
 .evaluation-pane-header {
-  display:     flex;
-  align-items: baseline;
-  gap:         0.3rem;
+  display:        flex;
+  align-items:    baseline;
+  gap:            0.3rem;
   padding-bottom: 0.3rem;
-  border-bottom:  1px solid #dde8f5;
+  border-bottom:  1px solid #2d2a50;
 }
 
-.evaluation-pane.pane-true  .evaluation-pane-header { border-bottom-color: #b6dfc4; }
-.evaluation-pane.pane-false .evaluation-pane-header { border-bottom-color: #f0c0c0; }
+.evaluation-pane.pane-true  .evaluation-pane-header { border-bottom-color: #64ffda2a; }
+.evaluation-pane.pane-false .evaluation-pane-header { border-bottom-color: #f472b62a; }
 
 .evaluation-pane-number {
-  font-size:    0.65rem;
-  font-weight:  700;
-  color:        #aaa;
-  font-family:  sans-serif;
-  flex-shrink:  0;
-  align-self:   flex-start;
-  padding-top:  0.05rem;
+  font-size:   0.65rem;
+  font-weight: 700;
+  color:       #64748b;
+  font-family: sans-serif;
+  flex-shrink: 0;
+  align-self:  flex-start;
+  padding-top: 0.05rem;
 }
 
 .evaluation-pane-title-formula .formula-display {
@@ -81,12 +81,12 @@
 /* ─── Step list ───────────────────────────────────────────────────────────── */
 
 .evaluation-pane-steps {
-  list-style:    decimal;
-  padding-left:  1.4rem;
-  margin:        0;
-  display:       flex;
+  list-style:     decimal;
+  padding-left:   1.4rem;
+  margin:         0;
+  display:        flex;
   flex-direction: column;
-  gap:           0.2rem;
+  gap:            0.2rem;
 }
 
 .evaluation-pane-step {
@@ -96,18 +96,19 @@
   font-size:   0.9rem;
   line-height: 1.5;
   white-space: nowrap;
+  color:       #e2e8f0;
 }
 
 /* Last sub-step (the computation result) is visually emphasised */
 .evaluation-pane-step.step-last {
   margin-top:  0.2rem;
   padding-top: 0.2rem;
-  border-top:  1px dashed #ccc;
+  border-top:  1px dashed #2d2a50;
   font-weight: 600;
 }
 
-.evaluation-pane.pane-true  .evaluation-pane-step.step-last { border-top-color: #b6dfc4; }
-.evaluation-pane.pane-false .evaluation-pane-step.step-last { border-top-color: #f0c0c0; }
+.evaluation-pane.pane-true  .evaluation-pane-step.step-last { border-top-color: #64ffda2a; }
+.evaluation-pane.pane-false .evaluation-pane-step.step-last { border-top-color: #f472b62a; }
 
 /* ─── Sub-step parts ──────────────────────────────────────────────────────── */
 
@@ -125,10 +126,11 @@
 .sub-text {
   font-family: monospace;
   font-size:   0.9rem;
+  color:       #e2e8f0;
 }
 
 .sub-step-separator {
-  color:       #777;
+  color:       #64748b;
   font-family: 'Georgia', serif;
   font-size:   0.9rem;
   margin:      0 0.1rem;
@@ -140,5 +142,5 @@
   font-family: monospace;
 }
 
-.sub-step-value.value-true  { color: #1a7a1a; }
-.sub-step-value.value-false { color: #a00000; }
+.sub-step-value.value-true  { color: #64ffda; }
+.sub-step-value.value-false { color: #f472b6; }

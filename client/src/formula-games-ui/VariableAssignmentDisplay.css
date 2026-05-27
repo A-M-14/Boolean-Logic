@@ -15,16 +15,16 @@
 
 .assignment-variable {
   font-style: italic;
-  color:      #1a1a1a;
+  color:      #e2e8f0;
 }
 
 .assignment-equals {
-  color: #666;
+  color: #64748b;
 }
 
 .assignment-value {
   font-weight: bold;
 }
 
-.value-true  { color: #2a7a2a; }
-.value-false { color: #a00000; }
+.value-true  { color: #64ffda; }
+.value-false { color: #f472b6; }

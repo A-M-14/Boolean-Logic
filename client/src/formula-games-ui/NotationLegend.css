@@ -9,17 +9,19 @@
   padding:       0.5rem 1rem;
   font-size:     0.88rem;
   font-weight:   500;
-  border:        none;
+  border:        1px solid #2d2a50;
   border-radius: 6px;
-  background:    #0f766e;
-  color:         #fff;
+  background:    #1e1b3a;
+  color:         #94a3b8;
   cursor:        pointer;
   white-space:   nowrap;
-  transition:    background 0.1s;
+  font-family:   inherit;
+  transition:    border-color 0.15s, color 0.15s;
 }
 
 .notation-legend-button:hover {
-  background: #0c6560;
+  border-color: #a78bfa;
+  color:        #a78bfa;
 }
 
 /* Panel slides out of the button downward */
@@ -27,10 +29,10 @@
   position:         absolute;
   top:              calc(100% + 4px);
   left:             0;
-  background:       #fff;
-  border:           1px solid #ccc;
+  background:       #1e1b3a;
+  border:           1px solid #2d2a50;
   border-radius:    6px;
-  box-shadow:       0 4px 14px rgba(0, 0, 0, 0.12);
+  box-shadow:       0 4px 14px rgba(0, 0, 0, 0.4);
   z-index:          200;
   overflow:         hidden;
   transform-origin: top center;
@@ -53,19 +55,20 @@
 
 .notation-legend-table th,
 .notation-legend-table td {
-  border:     1px solid #ddd;
+  border:     1px solid #2d2a50;
   padding:    0.5rem 1rem;
   text-align: center;
+  color:      #e2e8f0;
 }
 
 .notation-legend-table thead th {
-  background:  #f5f7fa;
+  background:  #160d28;
   font-weight: 600;
-  color:       #333;
+  color:       #94a3b8;
 }
 
 .notation-legend-table tbody tr:hover {
-  background: #f9f9f9;
+  background: #2d2a50;
 }
 
 /* Mathematical column — serif font to match formula display */

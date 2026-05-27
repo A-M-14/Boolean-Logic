@@ -7,12 +7,13 @@
 
 .score-label {
   font-size: 1.05rem;
-  color:     #666;
+  color:     #64748b;
 }
 
 .score-value {
   font-weight: bold;
   font-size:   1.4rem;
+  color:       #e2e8f0;
 }
 
 .score-online { gap: 1.2rem; }
@@ -26,13 +27,13 @@
 
 .score-name {
   font-size: 0.78rem;
-  color:     #666;
+  color:     #64748b;
 }
 
-.score-value.you { color: #1a6bb5; }
-.score-value.opponent { color: #b51a1a; }
+.score-value.you      { color: #64ffda; }
+.score-value.opponent { color: #f472b6; }
 
 .score-vs {
   font-size: 0.85rem;
-  color:     #bbb;
+  color:     #2d2a50;
 }

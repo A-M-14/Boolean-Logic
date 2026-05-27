@@ -9,8 +9,17 @@
   animation:     slide-in 0.2s ease;
 }
 
-.round-result.correct   { background: #e8f5e9; color: #2a7a2a; }
-.round-result.incorrect { background: #ffebee; color: #a00000; }
+.round-result.correct {
+  background: #0d2520;
+  color:      #64ffda;
+  border:     1px solid #64ffda4d;
+}
+
+.round-result.incorrect {
+  background: #250d1a;
+  color:      #f472b6;
+  border:     1px solid #f472b64d;
+}
 
 .result-icon { font-size: 1.4rem; }
 

@@ -45,6 +45,7 @@ export function FormulaGameSession({
   difficulty,
   onSessionEnd,
   onPlayAgain,
+  onBackToMenu,
   socket,
   playerName = 'You',
   opponentName = 'Opponent',
@@ -313,6 +314,7 @@ export function FormulaGameSession({
           record={roundHistory[reviewRoundIndex]}
           roundNumber={reviewRoundIndex + 1}
           onBack={() => setReviewRoundIndex(null)}
+          onBackToMenu={onBackToMenu}
         />
       );
     }
@@ -326,6 +328,7 @@ export function FormulaGameSession({
           onPlayAgain={() => { startNewSession(); onPlayAgain?.(); }}
           onMenu={() => onSessionEnd(totalScore)}
           onReviewRound={setReviewRoundIndex}
+          onBackToMenu={onBackToMenu}
         />
       );
     }
@@ -339,6 +342,7 @@ export function FormulaGameSession({
         roundHistory={roundHistory}
         onMenu={() => onSessionEnd(totalScore)}
         onReviewRound={setReviewRoundIndex}
+        onBackToMenu={onBackToMenu}
       />
     );
   }
@@ -349,10 +353,18 @@ export function FormulaGameSession({
   return (
     <div className="formula-game-session-container">
 
-      {/* Notation controls */}
+      {/* Notation controls + back button */}
       <div className="formula-game-session-notation-bar">
-        <NotationSelector notation={notation} onChange={setNotation} />
-        <NotationLegend />
+        <div className="notation-bar-side notation-bar-left">
+          {onBackToMenu !== undefined && (
+            <button className="game-back-btn" onClick={onBackToMenu}>← Back to Menu</button>
+          )}
+        </div>
+        <div className="notation-bar-center">
+          <NotationSelector notation={notation} onChange={setNotation} />
+          <NotationLegend />
+        </div>
+        <div className="notation-bar-side notation-bar-right" />
       </div>
 
       {/* Header: round counter + score */}

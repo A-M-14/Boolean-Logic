@@ -49,3 +49,28 @@ export function checkEquivalence(formulaA: Formula, formulaB: Formula): boolean 
   }
   return true;
 }
+
+/**
+ * Finds a variable assignment that witnesses the non-equivalence of two
+ * formulas (an assignment on which they differ), or null if they are
+ * equivalent.
+ */
+export function findCounterexample(
+  formulaA: Formula,
+  formulaB: Formula,
+): VariableAssignment | null {
+  const allVars = [...new Set([...formulaA.variables, ...formulaB.variables])].sort();
+  const n = allVars.length;
+
+  for (let mask = 0; mask < (1 << n); mask++) {
+    const assignment: Record<string, boolean> = {};
+    for (let i = 0; i < n; i++) {
+      assignment[allVars[i]] = Boolean((mask >> i) & 1);
+    }
+    const a = evaluateFormula(formulaA.root, assignment);
+    const b = evaluateFormula(formulaB.root, assignment);
+    if (a !== b) return assignment;
+  }
+
+  return null;
+}

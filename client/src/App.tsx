@@ -144,7 +144,7 @@ function BoardGameIcon() {
 
 /**
  * Formula equivalence in the app's mathematical notation (De Morgan's law):
- *   ̄(x · y)  ≡  (x̄ + ȳ)
+ *   ̄(x ∧ y)  ≡  (x̄ ∨ ȳ)
  */
 function FormulaIcon() {
   return (
@@ -153,11 +153,11 @@ function FormulaIcon() {
       xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
       style={{ filter: 'drop-shadow(0 0 5px #f472b655)', display: 'block' }}
     >
-      {/* Very faint negation bar above the first expression */}
-      <line x1="15" y1="6" x2="49" y2="6" stroke="#f472b6" strokeWidth="0.8" opacity="0.2" />
+      {/* Negation bar above the first expression */}
+      <line x1="15" y1="6" x2="49" y2="6" stroke="#f472b6" strokeWidth="1.5" opacity="0.9" />
       {/* Top formula: NOT(x AND y) */}
       <text x="32" y="16" textAnchor="middle"
-            fill="#f472b6" fontSize="12" fontFamily="Georgia,serif">(x · y)</text>
+            fill="#f472b6" fontSize="12" fontFamily="Georgia,serif">(x ∧ y)</text>
       {/* Equals sign */}
       <text x="32" y="35" textAnchor="middle"
             fill="#f472b6" fontSize="12" fontFamily="Georgia,serif">=</text>
@@ -166,7 +166,7 @@ function FormulaIcon() {
             fill="#f472b6" fontSize="11" fontFamily="Georgia,serif">
         <tspan>(</tspan>
         <tspan style={{ textDecoration: 'overline' }}>x</tspan>
-        <tspan> + </tspan>
+        <tspan> ∨ </tspan>
         <tspan style={{ textDecoration: 'overline' }}>y</tspan>
         <tspan>)</tspan>
       </text>
@@ -183,7 +183,6 @@ function MainMenu({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
       <div className="main-menu__hero">
         <AppLogo />
         <h1 className="main-menu__title">Boolean Logic</h1>
-        <p className="main-menu__subtitle">Master the art of True &amp; False</p>
       </div>
 
       <div className="main-menu__cards">
@@ -318,7 +317,7 @@ const FORMULA_TYPE_OPTIONS: MenuOption[] = [
            xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
            style={{ display: 'block' }}>
         <text x="16" y="11" textAnchor="middle"
-              fill="#e2e8f0" fontSize="10" fontFamily="Georgia,serif">(x + y)</text>
+              fill="#e2e8f0" fontSize="10" fontFamily="Georgia,serif">(x ∨ y)</text>
         <text x="16" y="24" textAnchor="middle"
               fill="#e2e8f0" fontSize="10" fontFamily="Georgia,serif">= 1</text>
       </svg>

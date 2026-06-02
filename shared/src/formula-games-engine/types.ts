@@ -34,6 +34,8 @@ export interface EquivalenceRound {
   readonly formulaA:      Formula;
   readonly formulaB:      Formula;
   readonly areEquivalent: boolean;
+  /** Algebraic proof chain from formulaA to formulaB. Present when areEquivalent is true. */
+  readonly proof?:        readonly EquivalenceProofStep[];
 }
 
 /** Result of submitting an answer in Evaluation mode. */

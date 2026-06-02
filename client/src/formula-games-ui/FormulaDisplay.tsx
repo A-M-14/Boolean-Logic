@@ -9,8 +9,8 @@ function binarySymbol(operator: BinaryOperator, notation: FormulaNotation): stri
   switch (notation) {
     case 'mathematical':
       switch (operator) {
-        case 'AND': return '\u00B7';   // ·
-        case 'OR':  return '+';
+        case 'AND': return '\u2227';   // ∧
+        case 'OR':  return '\u2228';   // ∨
         case 'XOR': return '\u2295';   // ⊕
       }
       break;

@@ -22,8 +22,8 @@ interface EvaluationPane {
 
 function binaryOperatorSymbol(operator: string, notation: FormulaNotation): string {
   if (notation === 'mathematical') {
-    if (operator === 'AND') return '\u00B7';   // ·
-    if (operator === 'OR')  return '+';
+    if (operator === 'AND') return '\u2227';   // ∧
+    if (operator === 'OR')  return '\u2228';   // ∨
     if (operator === 'XOR') return '\u2295';   // ⊕
   }
   if (notation === 'c') {

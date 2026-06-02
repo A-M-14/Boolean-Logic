@@ -1,5 +1,5 @@
 import React from 'react';
-import { generateEquivalenceProof, findCounterexample, evaluateFormula } from '@boolean-logic/shared';
+import { findCounterexample, evaluateFormula } from '@boolean-logic/shared';
 import type { EquivalenceRound, EvaluationRound } from '@boolean-logic/shared';
 import { FormulaDisplay }             from './FormulaDisplay.js';
 import { VariableAssignmentDisplay }  from './VariableAssignmentDisplay.js';
@@ -60,7 +60,7 @@ export function EquivalenceProofDisplay({ round, notation }: EquivalenceProofDis
   }
 
   // ── Equivalent: show algebraic equality chain ────────────────────────────
-  const steps = generateEquivalenceProof(round.formulaA, round.formulaB);
+  const steps = round.proof ?? [];
 
   if (steps.length === 0) {
     return (

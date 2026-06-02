@@ -40,12 +40,12 @@ export function NotationLegend() {
           </thead>
           <tbody>
             <tr>
-              <td className="notation-legend-math">x + y</td>
+              <td className="notation-legend-math">x ∨ y</td>
               <td>x or y</td>
               <td>x | y</td>
             </tr>
             <tr>
-              <td className="notation-legend-math">x · y</td>
+              <td className="notation-legend-math">x ∧ y</td>
               <td>x and y</td>
               <td>x &amp; y</td>
             </tr>

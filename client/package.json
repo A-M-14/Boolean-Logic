@@ -4,23 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev":        "vite",
-    "build":      "tsc && vite build",
-    "preview":    "vite preview",
-    "test":       "vitest run",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@boolean-logic/shared": "*",
-    "react":     "^18.3.0",
+    "@dnd-kit/core": "^6.3.1",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0",
+    "react": "^18.3.0",
     "react-dom": "^18.3.0"
   },
   "devDependencies": {
-    "@types/react":        "^18.3.0",
-    "@types/react-dom":    "^18.3.0",
+    "@types/d3-selection": "^3.0.11",
+    "@types/d3-zoom": "^3.0.8",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
-    "typescript":          "^5.4.0",
-    "vite":                "^5.3.0",
-    "vitest":              "^2.0.0"
+    "typescript": "^5.4.0",
+    "vite": "^5.3.0",
+    "vitest": "^2.0.0"
   }
 }

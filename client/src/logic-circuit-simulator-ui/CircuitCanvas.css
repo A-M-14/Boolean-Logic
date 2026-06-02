@@ -1,0 +1,37 @@
+.circuit-canvas-wrap {
+  flex:     1;
+  overflow: hidden;
+  position: relative;
+  display:  flex;
+  transition: box-shadow 0.15s;
+}
+
+.circuit-canvas-wrap--over {
+  box-shadow: inset 0 0 0 2px #64ffda44;
+}
+
+.circuit-canvas {
+  display:     block;
+  width:       100%;
+  height:      100%;
+  user-select: none;
+  cursor:      default;
+}
+
+.circuit-canvas--wiring {
+  cursor: crosshair;
+}
+
+.canvas-empty-hint {
+  position:       absolute;
+  top:            50%;
+  left:           50%;
+  transform:      translate(-50%, -50%);
+  color:          #252240;
+  font-size:      0.9rem;
+  font-weight:    500;
+  text-align:     center;
+  pointer-events: none;
+  line-height:    1.7;
+  z-index:        1;
+}

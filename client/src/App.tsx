@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Difficulty } from '@boolean-logic/shared';
 import type { GameType } from './formula-games-ui/types.js';
 import { FormulaGameSession } from './formula-games-ui/FormulaGameSession.js';
+import { CircuitSimulator } from './logic-circuit-simulator-ui/index.js';
 import './App.css';
 
 type BoardMode       = 'single' | 'one-on-one' | 'vs-computer';
@@ -352,11 +353,7 @@ export function App() {
       );
 
     case 'simulator':
-      return (
-        <div className="app">
-          <ComingSoon label="Simulator" onBack={goMain} />
-        </div>
-      );
+      return <CircuitSimulator onBack={goMain} />;
 
     case 'board-mode':
       return (

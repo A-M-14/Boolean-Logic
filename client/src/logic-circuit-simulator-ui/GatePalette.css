@@ -1,0 +1,76 @@
+/* Palette entries are now direct children of cs-bottombar (horizontal) */
+
+.palette-entry {
+  background:    #1e1b3a;
+  border:        1px solid #2d2a50;
+  border-radius: 7px;
+  color:         #cbd5e1;
+  cursor:        grab;
+  font-family:   inherit;
+  font-size:     0.7rem;
+  font-weight:   600;
+  padding:       0.2rem 0.35rem 0.25rem;
+  display:       flex;
+  flex-direction: column;
+  align-items:   center;
+  gap:           0.15rem;
+  flex-shrink:   0;
+  transition:    border-color 0.14s, background 0.14s, box-shadow 0.14s, opacity 0.14s;
+  touch-action:  none;
+  user-select:   none;
+  min-width:     56px;
+}
+
+.palette-entry--dragging {
+  opacity: 0.35;
+  cursor:  grabbing;
+}
+
+.palette-entry--gate:hover,
+.palette-entry--gate:focus-visible {
+  border-color: #a78bfa;
+  background:   #a78bfa0d;
+  color:        #e2e8f0;
+  box-shadow:   0 0 8px #a78bfa22;
+  outline:      none;
+}
+
+.palette-entry--io:hover,
+.palette-entry--io:focus-visible {
+  border-color: #facc15;
+  background:   #facc150d;
+  color:        #e2e8f0;
+  box-shadow:   0 0 8px #facc1522;
+  outline:      none;
+}
+
+.palette-entry--split:hover,
+.palette-entry--split:focus-visible {
+  border-color: #64748b;
+  background:   #64748b0d;
+  color:        #e2e8f0;
+  outline:      none;
+}
+
+.palette-entry__icon {
+  display: block;
+  width:   56px;
+  height:  36px;
+}
+
+.palette-entry__label {
+  line-height: 1;
+  color:       #6d5fd4;
+  font-size:   0.68rem;
+}
+
+.palette-entry--io .palette-entry__label  { color: #a5a5a5; }
+.palette-entry--split .palette-entry__label { color: #64748b; }
+
+.palette-sep {
+  width:       1px;
+  height:      50px;
+  background:  #2d2a50;
+  flex-shrink: 0;
+  margin:      0 0.1rem;
+}

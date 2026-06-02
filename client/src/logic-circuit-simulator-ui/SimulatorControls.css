@@ -1,0 +1,43 @@
+.sim-controls {
+  display:     flex;
+  align-items: center;
+  gap:         0.5rem;
+}
+
+.sim-controls__btn {
+  background:    #1e1b3a;
+  border:        1px solid #2d2a50;
+  border-radius: 7px;
+  color:         #94a3b8;
+  cursor:        pointer;
+  font-family:   inherit;
+  font-size:     0.8rem;
+  font-weight:   600;
+  padding:       0.35rem 0.9rem;
+  transition:    border-color 0.14s, color 0.14s, background 0.14s, box-shadow 0.14s;
+  white-space:   nowrap;
+}
+
+.sim-controls__btn:disabled {
+  opacity: 0.35;
+  cursor:  not-allowed;
+}
+
+.sim-controls__btn--run:not(:disabled):hover,
+.sim-controls__btn--run.sim-controls__btn--active {
+  border-color: #4ade80;
+  color:        #4ade80;
+  box-shadow:   0 0 8px #4ade8022;
+}
+
+.sim-controls__btn--stop:not(:disabled):hover {
+  border-color: #f87171;
+  color:        #f87171;
+  box-shadow:   0 0 8px #f8717122;
+}
+
+.sim-controls__btn--reset:not(:disabled):hover {
+  border-color: #64ffda;
+  color:        #64ffda;
+  box-shadow:   0 0 8px #64ffda22;
+}

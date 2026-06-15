@@ -1,6 +1,6 @@
 import React from 'react';
 import type { GateNode as GateNodeType } from '../logic-circuit-simulator-engine/index.js';
-import { GATE_W, GATE_H, PORT_R, HIT_R, getInputPort, getOutputPort } from './utils.js';
+import { GATE_W, GATE_H, PORT_R, HIT_R, IN_HIT_R, getInputPort, getOutputPort, rotateAround } from './utils.js';
 
 // ── IEEE/ANSI gate body shapes ─────────────────────────────────────────────────
 // All paths defined in local space: origin at gate center,
@@ -12,7 +12,7 @@ const STROKE = '#a78bfa';
 const SW     = 2;
 const NONE   = 'none';
 
-function GateBody({ gateType }: { gateType: string }) {
+export function GateBody({ gateType }: { gateType: string }) {
   switch (gateType) {
 
     case 'AND':
@@ -105,13 +105,14 @@ interface GateNodeProps {
   hasPending: boolean;
   onDown:     (e: React.MouseEvent) => void;
   onDblClick: (e: React.MouseEvent) => void;
+  onClick:    (e: React.MouseEvent) => void;
   onOutPort:  (e: React.MouseEvent, portIndex: number) => void;
   onInPort:   (e: React.MouseEvent, portIndex: number) => void;
 }
 
 export function GateNode({
   node, hasPending,
-  onDown, onDblClick, onOutPort, onInPort,
+  onDown, onDblClick, onClick, onOutPort, onInPort,
 }: GateNodeProps) {
   const { x, y } = node.position;
   const iCount = node.gateType === 'NOT' ? 1 : 2;
@@ -120,22 +121,29 @@ export function GateNode({
     <g>
       {/* Gate shape — draggable */}
       <g
-        transform={`translate(${x},${y})`}
+        transform={`translate(${x},${y}) rotate(${node.rotation})`}
         onMouseDown={onDown}
         onDoubleClick={onDblClick}
+        onClick={onClick}
         style={{ cursor: 'grab' }}
       >
         <GateBody gateType={node.gateType} />
-        {/* Label below the gate body */}
-        <text
-          x={0} y={GATE_H / 2 + 13}
-          textAnchor="middle" dominantBaseline="central"
-          fill="#6d5fd4" fontSize={10} fontWeight={600}
-          style={{ fontFamily: 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
-        >
-          {node.gateType}
-        </text>
       </g>
+
+      {/* Label — always horizontal; orbits the gate as it rotates */}
+      {(() => {
+        const lp = rotateAround({ x, y: y + GATE_H / 2 + 13 }, { x, y }, node.rotation);
+        return (
+          <text
+            x={lp.x} y={lp.y}
+            textAnchor="middle" dominantBaseline="central"
+            fill="#6d5fd4" fontSize={10} fontWeight={600}
+            style={{ fontFamily: 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
+          >
+            {node.gateType}
+          </text>
+        );
+      })()}
 
       {/* Input ports */}
       {Array.from({ length: iCount }, (_, i) => {
@@ -145,7 +153,7 @@ export function GateNode({
             <circle cx={pp.x} cy={pp.y} r={PORT_R}
               fill="#111827" stroke={hasPending ? '#facc1588' : '#374151'} strokeWidth={1.5}
               style={{ pointerEvents: 'none' }} />
-            <circle cx={pp.x} cy={pp.y} r={HIT_R} fill="transparent"
+            <circle cx={pp.x} cy={pp.y} r={IN_HIT_R} fill="transparent"
               style={{ cursor: hasPending ? 'pointer' : 'default' }}
               onClick={e => onInPort(e, i)} />
           </g>

@@ -15,7 +15,6 @@
 .cs-topbar {
   display:         flex;
   align-items:     center;
-  gap:             0.85rem;
   padding:         0.45rem 1.1rem;
   border-bottom:   1px solid #1e1b3a;
   background:      rgba(13, 11, 30, 0.9);
@@ -24,12 +23,14 @@
   z-index:         20;
 }
 
-.cs-title {
-  font-size:   0.95rem;
-  font-weight: 700;
-  color:       #a78bfa;
-  margin:      0;
-  flex:        1;
+.cs-topbar__left,
+.cs-topbar__right {
+  flex: 1;
+}
+
+.cs-topbar__center {
+  display:         flex;
+  justify-content: center;
 }
 
 /* ── Body (canvas fills everything) ──────────────────────────────────────── */
@@ -43,15 +44,16 @@
 /* ── Bottom toolbar ───────────────────────────────────────────────────────── */
 
 .cs-bottombar {
-  display:       flex;
-  align-items:   center;
-  gap:           0.6rem;
-  padding:       0.45rem 0.9rem;
-  border-top:    2px solid #1e1b3a;
-  background:    #0a0918;
-  flex-shrink:   0;
-  z-index:       20;
-  overflow-x:    auto;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             0.6rem;
+  padding:         0.45rem 0.9rem;
+  border-top:      2px solid #1e1b3a;
+  background:      #0a0918;
+  flex-shrink:     0;
+  z-index:         20;
+  overflow-x:      auto;
 }
 
 .cs-bottombar__sep {
@@ -83,35 +85,3 @@
   background:   #f8717112;
 }
 
-/* ── Drag overlay preview ────────────────────────────────────────────────── */
-
-.cs-drag-preview {
-  background:    #1e1b3a;
-  border:        1px solid #a78bfa;
-  border-radius: 8px;
-  padding:       0.35rem 0.65rem;
-  display:       flex;
-  align-items:   center;
-  gap:           0.4rem;
-  font-size:     0.8rem;
-  font-weight:   700;
-  color:         #e2e8f0;
-  box-shadow:    0 4px 20px #0007;
-  pointer-events: none;
-  white-space:   nowrap;
-}
-
-.cs-drag-preview--io {
-  border-color: #64ffda;
-  color:        #64ffda;
-}
-
-.cs-drag-preview__sym {
-  font-size:   0.95rem;
-  font-family: Georgia, serif;
-  color:       #c4b5fd;
-}
-
-.cs-drag-preview__label {
-  color: #a78bfa;
-}

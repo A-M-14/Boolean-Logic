@@ -92,9 +92,6 @@ export function SessionSummary(props: SessionSummaryProps) {
           <button className="summary-button primary" onClick={props.onPlayAgain}>
             Play Again
           </button>
-          <button className="summary-button secondary" onClick={props.onMenu}>
-            Menu
-          </button>
         </div>
       </div>
     );

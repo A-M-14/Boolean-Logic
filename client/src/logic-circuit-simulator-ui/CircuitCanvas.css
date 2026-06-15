@@ -22,6 +22,97 @@
   cursor: crosshair;
 }
 
+.input-value-selector {
+  position:       fixed;
+  transform:      translateX(-50%);
+  display:        flex;
+  flex-direction: column;
+  gap:            4px;
+  padding:        4px;
+  background:     #1e1b3a;
+  border:         1px solid #4a4a8a;
+  border-radius:  8px;
+  z-index:        100;
+}
+
+.input-value-btn {
+  width:         48px;
+  height:        48px;
+  border-radius: 6px;
+  border:        2px solid transparent;
+  font-size:     20px;
+  font-weight:   700;
+  font-family:   Georgia, serif;
+  cursor:        pointer;
+  line-height:   1;
+  transition:    background 0.1s, filter 0.1s, transform 0.08s;
+}
+
+.input-value-btn:active {
+  transform: scale(0.93);
+}
+
+.input-value-btn--0 {
+  background:   #ef444418;
+  border-color: #ef4444;
+  color:        #ef4444;
+}
+
+.input-value-btn--0:hover {
+  background: #ef444432;
+  filter:     brightness(1.15);
+}
+
+.input-value-btn--1 {
+  background:   #facc1518;
+  border-color: #facc15;
+  color:        #facc15;
+}
+
+.input-value-btn--1:hover {
+  background: #facc1532;
+  filter:     brightness(1.15);
+}
+
+/* ── Remove zone ───────────────────────────────────────────────────────────── */
+
+.remove-zone {
+  position:       absolute;
+  top:            12px;
+  right:          12px;
+  width:          80px;
+  padding:        10px 0;
+  border-radius:  10px;
+  background:     #7f1d1d28;
+  border:         2px solid #ef4444aa;
+  color:          #ef4444;
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            5px;
+  font-size:      0.72rem;
+  font-weight:    700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index:        10;
+  transition:     background 0.12s, border-color 0.12s, box-shadow 0.12s, color 0.12s;
+  user-select:    none;
+}
+
+.remove-zone__icon {
+  width:  22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.remove-zone--hover {
+  background:  #ef444438;
+  border-color:#ff6b6b;
+  color:       #ff8888;
+  box-shadow:  0 0 18px #ef444450, inset 0 0 8px #ef444420;
+}
+
 .canvas-empty-hint {
   position:       absolute;
   top:            50%;

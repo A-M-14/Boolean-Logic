@@ -5,7 +5,7 @@ export { CircuitCanvas }         from './CircuitCanvas.js';
 export { GatePalette }           from './GatePalette.js';
 export { SimulatorControls }     from './SimulatorControls.js';
 export { GateNode }              from './GateNode.js';
-export { WireComponent }         from './WireComponent.js';
+export { Wire }                  from './Wire.js';
 export { CircuitInput }          from './CircuitInput.js';
 export { CircuitOutput }         from './CircuitOutput.js';
 export { WireSplitPoint }        from './WireSplitPoint.js';

@@ -18,30 +18,35 @@ export function CircuitInput({
   node, hasPending,
   onDown, onDblClick, onClick, onOutPort,
 }: CircuitInputProps) {
-  const col = node.value ? '#facc15' : '#ef4444';  // yellow = 1, red = 0
+  const col = node.value === true ? '#facc15' : node.value === false ? '#ef4444' : '#475569';
   const pp  = getOutputPort(node, 0);
   const { x, y } = node.position;
 
   return (
     <g>
-      {/* Box body */}
+      {/* Box body — rotates */}
       <g onMouseDown={onDown} onDoubleClick={onDblClick} onClick={onClick}
-         style={{ cursor: 'pointer' }}>
+         style={{ cursor: 'pointer' }}
+         transform={`rotate(${node.rotation}, ${x}, ${y})`}>
         <rect
           x={x - BOX / 2} y={y - BOX / 2}
           width={BOX} height={BOX}
           rx={4}
           fill="#111827" stroke={col} strokeWidth={2}
         />
-        <text
-          x={x} y={y}
-          textAnchor="middle" dominantBaseline="central"
-          fill={col} fontSize={18} fontWeight={700}
-          style={{ fontFamily: 'Georgia, serif', pointerEvents: 'none', userSelect: 'none' }}
-        >
-          {node.value ? '1' : '0'}
-        </text>
       </g>
+
+      {/* Label — always horizontal at box center */}
+      <text
+        x={x} y={y}
+        textAnchor="middle" dominantBaseline="central"
+        fill={col}
+        fontSize={node.value !== null ? 18 : 9}
+        fontWeight={700}
+        style={{ fontFamily: node.value !== null ? 'Georgia, serif' : 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
+      >
+        {node.value === true ? '1' : node.value === false ? '0' : 'INPUT'}
+      </text>
 
       {/* Output port */}
       <circle cx={pp.x} cy={pp.y} r={PORT_R}

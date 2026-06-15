@@ -13,6 +13,7 @@ export interface Position {
 interface BaseNode {
   readonly id: NodeId;
   readonly position: Position;
+  readonly rotation: 0 | 90 | 180 | 270;
 }
 
 export interface GateNode extends BaseNode {
@@ -22,7 +23,7 @@ export interface GateNode extends BaseNode {
 
 export interface InputNode extends BaseNode {
   readonly type: 'input';
-  readonly value: boolean;
+  readonly value: boolean | null;
 }
 
 export interface OutputNode extends BaseNode {
@@ -31,6 +32,7 @@ export interface OutputNode extends BaseNode {
 
 export interface SplitNode extends BaseNode {
   readonly type: 'split';
+  readonly outputCount: number;
 }
 
 export type CircuitNode = GateNode | InputNode | OutputNode | SplitNode;
@@ -46,6 +48,8 @@ export interface Wire {
   readonly from: Port;
   readonly to: Port;
   readonly signal: boolean | undefined;
+  /** Intermediate turn-points in circuit space, in order from→to. */
+  readonly waypoints: readonly Position[];
 }
 
 export interface CircuitState {
@@ -55,7 +59,7 @@ export interface CircuitState {
 
 /** Payload passed to CircuitStateManager.addNode — id is assigned internally. */
 export type NodeInit =
-  | { readonly type: 'gate';   readonly gateType: GateType; readonly position: Position }
-  | { readonly type: 'input';  readonly value: boolean;     readonly position: Position }
-  | { readonly type: 'output';                              readonly position: Position }
-  | { readonly type: 'split';                               readonly position: Position };
+  | { readonly type: 'gate';   readonly gateType: GateType; readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 }
+  | { readonly type: 'input';  readonly value?: boolean | null; readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 }
+  | { readonly type: 'output';                              readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 }
+  | { readonly type: 'split'; readonly outputCount?: number; readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 };

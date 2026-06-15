@@ -182,9 +182,6 @@ function countBinaryOps(node: FormulaNode): number {
 
 const MAX_BINARY_OPS = 10;
 
-// Distribution is suppressed once the formula exceeds this node count to
-// prevent combinatorial blowup.
-const MAX_NODES_FOR_DISTRIBUTION = 25;
 
 // ---------------------------------------------------------------------------
 // Rule keys, display names, inverses, and application probabilities
@@ -234,16 +231,6 @@ const RULE_DISPLAY: Record<RuleKey, string> = {
  * Probability that a rule fires when it is structurally applicable.
  * All values are in [0.50, 0.80].
  */
-const RULE_PROBABILITY: Record<RuleKey, number> = {
-  'commutativity':          0.50,
-  'double-negation':        0.65,
-  'demorgan-forward':       0.70,
-  'demorgan-reverse':       0.70,
-  'xor-expansion':          0.65,
-  'xor-contraction':        0.65,
-  'distribution-forward':   0.55,
-  'distribution-reverse':   0.60,
-};
 
 type GenRewrite = {
   newRoot:  FormulaNode;  // full formula after applying the rule
@@ -359,8 +346,8 @@ function collectRewrites(
     );
   }
 
-  // Distribution [medium and hard, suppressed above MAX_NODES_FOR_DISTRIBUTION]
-  if (difficulty !== 'easy' && fullSize <= MAX_NODES_FOR_DISTRIBUTION) {
+  // Distribution [medium and hard only]
+  if (difficulty !== 'easy') {
 
     // Forward: A AND (B OR C) → (A AND B) OR (A AND C)
     if (node.type === 'binary' && node.operator === 'AND' &&
@@ -483,62 +470,37 @@ function makeEquivalentWithProof(
   formula:    Formula,
   difficulty: Difficulty,
 ): { formula: Formula; proof: readonly EquivalenceProofStep[] } {
-  const numPasses =
-    difficulty === 'easy'   ? 1 :
-    difficulty === 'medium' ? 2 : 3;
-  const STEPS_MIN = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3;
-  const STEPS_MAX = 5;
+  const STEPS_MAX = difficulty === 'easy' ? 4 : difficulty === 'medium' ? 8 : 12;
 
   let current = formula.root;
   const proof: EquivalenceProofStep[] = [{ formula: current, ruleName: 'Given' }];
   const seen  = new Set<string>([serializeNode(current)]);
 
-  // Maps serialize(outputSubformula) → ruleKey that produced it in the
-  // previous pass.  In the next pass, the inverse of that rule is blocked
-  // at that subformula position.
-  let forbidden = new Map<string, RuleKey>();
+  // Tracks all rules ever applied to each subformula position to prevent
+  // undoing any of them in a later step.
+  const forbidden = new Map<string, Set<RuleKey>>();
 
-  for (let pass = 0; pass < numPasses; pass++) {
-    const stepsTarget =
-      STEPS_MIN + Math.floor(Math.random() * (STEPS_MAX - STEPS_MIN + 1));
+  for (let step = 0; step < STEPS_MAX; step++) {
+    const candidates: GenRewrite[] = [];
+    collectRewrites(current, n => n, difficulty, countNodes(current), candidates);
 
-    // Outputs of rewrites applied in this pass — becomes the next forbidden map.
-    const passOutputs = new Map<string, RuleKey>();
+    const valid = candidates.filter(r => {
+      if (seen.has(serializeNode(r.newRoot))) return false;
+      const prevRules = forbidden.get(serializeNode(r.on));
+      if (prevRules !== undefined && prevRules.has(RULE_INVERSE[r.ruleKey] as RuleKey)) return false;
+      if (countBinaryOps(r.newRoot) > MAX_BINARY_OPS) return false;
+      return true;
+    });
 
-    for (let step = 0; step < stepsTarget; step++) {
-      const candidates: GenRewrite[] = [];
-      collectRewrites(current, n => n, difficulty, countNodes(current), candidates);
+    if (valid.length === 0) break;
 
-      // Apply seen + forbidden + binary-op cap + probability filters.
-      let eligible = candidates.filter(r => {
-        if (seen.has(serializeNode(r.newRoot))) return false;
-        const prevRule = forbidden.get(serializeNode(r.on));
-        if (prevRule !== undefined && RULE_INVERSE[prevRule] === r.ruleKey) return false;
-        if (countBinaryOps(r.newRoot) > MAX_BINARY_OPS) return false;
-        return Math.random() < RULE_PROBABILITY[r.ruleKey];
-      });
-
-      // If probability knocked out every candidate, fall back without it.
-      if (eligible.length === 0) {
-        eligible = candidates.filter(r => {
-          if (seen.has(serializeNode(r.newRoot))) return false;
-          const prevRule = forbidden.get(serializeNode(r.on));
-          if (prevRule !== undefined && RULE_INVERSE[prevRule] === r.ruleKey) return false;
-          if (countBinaryOps(r.newRoot) > MAX_BINARY_OPS) return false;
-          return true;
-        });
-      }
-
-      if (eligible.length === 0) break;
-
-      const chosen = weightedPick(eligible);
-      current = chosen.newRoot;
-      seen.add(serializeNode(current));
-      passOutputs.set(serializeNode(chosen.outputOn), chosen.ruleKey);
-      proof.push({ formula: current, ruleName: chosen.ruleName, on: chosen.on });
-    }
-
-    forbidden = passOutputs;
+    const chosen = weightedPick(valid);
+    current = chosen.newRoot;
+    seen.add(serializeNode(current));
+    const onKey = serializeNode(chosen.outputOn);
+    if (!forbidden.has(onKey)) forbidden.set(onKey, new Set());
+    forbidden.get(onKey)!.add(chosen.ruleKey);
+    proof.push({ formula: current, ruleName: chosen.ruleName, on: chosen.on });
   }
 
   // Safety: if the walk returned to the original, force a structural step.
@@ -547,7 +509,12 @@ function makeEquivalentWithProof(
     collectRewrites(current, n => n, difficulty, countNodes(current), candidates);
     const fresh = candidates.filter(r => !seen.has(serializeNode(r.newRoot)));
     const structural = fresh.filter(
-      r => r.ruleKey === 'demorgan-forward' || r.ruleKey === 'distribution-forward',
+      r => r.ruleKey === 'demorgan-forward'    ||
+           r.ruleKey === 'demorgan-reverse'    ||
+           r.ruleKey === 'distribution-forward'||
+           r.ruleKey === 'distribution-reverse'||
+           r.ruleKey === 'xor-expansion'       ||
+           r.ruleKey === 'xor-contraction',
     );
     const pick = structural[0] ?? fresh[0];
     if (pick) {

@@ -2,25 +2,20 @@ import { evaluateGate } from '@boolean-logic/shared';
 import type { CircuitState, NodeId, Wire, WireId } from './types.js';
 
 /**
- * Computes signal values for every wire in the circuit using a topological
- * traversal (Kahn's algorithm). Starts from input nodes and propagates
- * downstream through gates and split points to output probes.
+ * Topological traversal (Kahn's algorithm) that also groups wires into
+ * "waves" — each sub-array contains the IDs of wires whose signals are
+ * resolved in that propagation step, in order from inputs outward.
+ * Only wires that carry a defined (true/false) signal are included.
  *
- * Wires in feedback cycles, or downstream of disconnected gate inputs,
- * receive signal = undefined (unresolved).
- *
- * Returns a new CircuitState with updated wire signals; the node map is
- * shared by reference (nodes are not mutated by propagation).
+ * Returns the final circuit state with all wire signals set, plus the
+ * ordered wave list used for the animated propagation effect.
  */
-export function propagateSignals(state: CircuitState): CircuitState {
-  // wireSignal[wireId] = the boolean value that flows through that wire,
-  // or undefined if it could not be computed.
-  const wireSignal = new Map<WireId, boolean | undefined>();
-
-  // incomingWires[nodeId][portIndex] = wireId arriving at that input port.
+export function propagateSignalsLayered(state: CircuitState): {
+  state: CircuitState;
+  waves: readonly (readonly WireId[])[];
+} {
+  const wireSignal    = new Map<WireId, boolean | undefined>();
   const incomingWires = new Map<NodeId, Map<number, WireId>>();
-
-  // outgoingWires[nodeId] = all wireIds leaving that node's output port(s).
   const outgoingWires = new Map<NodeId, WireId[]>();
 
   for (const [nodeId] of state.nodes) {
@@ -34,63 +29,75 @@ export function propagateSignals(state: CircuitState): CircuitState {
     wireSignal.set(wireId, undefined);
   }
 
-  // How many of a node's incoming wires have been assigned a signal so far.
   const resolvedCount = new Map<NodeId, number>();
   for (const [nodeId] of state.nodes) resolvedCount.set(nodeId, 0);
 
   const processed = new Set<NodeId>();
+  const waves: WireId[][] = [];
 
-  // Seed: every node with no incoming wires is immediately ready to process.
-  // This includes all input nodes (which have no input ports) as well as any
-  // gate/split/output that has been placed but not yet wired.
-  const queue: NodeId[] = [];
+  // Seed: every node with no incoming wires (inputs, isolated gates, etc.)
+  let currentWave: NodeId[] = [];
   for (const [nodeId] of state.nodes) {
-    if (incomingWires.get(nodeId)!.size === 0) queue.push(nodeId);
+    if (incomingWires.get(nodeId)!.size === 0) currentWave.push(nodeId);
   }
 
-  while (queue.length > 0) {
-    const nodeId = queue.shift()!;
-    if (processed.has(nodeId)) continue;
-    processed.add(nodeId);
+  while (currentWave.length > 0) {
+    const waveWires: WireId[]  = [];
+    const nextWave:  NodeId[]  = [];
+    const enqueuedInNext = new Set<NodeId>();
 
-    const node = state.nodes.get(nodeId)!;
-    let outputValue: boolean | undefined;
+    for (const nodeId of currentWave) {
+      if (processed.has(nodeId)) continue;
+      processed.add(nodeId);
 
-    if (node.type === 'input') {
-      outputValue = node.value;
-    } else if (node.type === 'gate') {
-      const portMap = incomingWires.get(nodeId)!;
-      const requiredPorts = node.gateType === 'NOT' ? 1 : 2;
-      const inputs: boolean[] = [];
-      let allPresent = true;
+      const node = state.nodes.get(nodeId)!;
+      let outputValue: boolean | undefined;
 
-      for (let i = 0; i < requiredPorts; i++) {
-        const wireId = portMap.get(i);
-        const sig = wireId !== undefined ? wireSignal.get(wireId) : undefined;
-        if (sig === undefined) { allPresent = false; break; }
-        inputs.push(sig);
+      if (node.type === 'input') {
+        outputValue = node.value !== null ? node.value : undefined;
+      } else if (node.type === 'gate') {
+        const portMap      = incomingWires.get(nodeId)!;
+        const requiredPorts = node.gateType === 'NOT' ? 1 : 2;
+        const inputs: boolean[] = [];
+        let allPresent = true;
+
+        for (let i = 0; i < requiredPorts; i++) {
+          const wireId = portMap.get(i);
+          const sig    = wireId !== undefined ? wireSignal.get(wireId) : undefined;
+          if (sig === undefined) { allPresent = false; break; }
+          inputs.push(sig);
+        }
+
+        outputValue = allPresent ? evaluateGate(node.gateType, inputs) : undefined;
+      } else if (node.type === 'split') {
+        const inputWireId = incomingWires.get(nodeId)!.get(0);
+        outputValue = inputWireId !== undefined ? wireSignal.get(inputWireId) : undefined;
       }
+      // 'output' nodes are sinks — no output to propagate.
 
-      outputValue = allPresent ? evaluateGate(node.gateType, inputs) : undefined;
-    } else if (node.type === 'split') {
-      // Pass the single incoming signal through to all outgoing wires.
-      const inputWireId = incomingWires.get(nodeId)!.get(0);
-      outputValue = inputWireId !== undefined ? wireSignal.get(inputWireId) : undefined;
-    }
-    // 'output' nodes are sinks — they have no output to propagate.
+      for (const wireId of outgoingWires.get(nodeId) ?? []) {
+        wireSignal.set(wireId, outputValue);
 
-    for (const wireId of outgoingWires.get(nodeId) ?? []) {
-      wireSignal.set(wireId, outputValue);
+        // Only wires with a defined signal are animated.
+        if (outputValue !== undefined) waveWires.push(wireId);
 
-      const downstreamId = state.wires.get(wireId)!.to.nodeId;
-      const newCount = resolvedCount.get(downstreamId)! + 1;
-      resolvedCount.set(downstreamId, newCount);
+        const downstreamId = state.wires.get(wireId)!.to.nodeId;
+        const newCount     = resolvedCount.get(downstreamId)! + 1;
+        resolvedCount.set(downstreamId, newCount);
 
-      // Enqueue the downstream node once all its wired inputs have signals.
-      if (newCount >= incomingWires.get(downstreamId)!.size && !processed.has(downstreamId)) {
-        queue.push(downstreamId);
+        if (
+          newCount >= incomingWires.get(downstreamId)!.size &&
+          !processed.has(downstreamId) &&
+          !enqueuedInNext.has(downstreamId)
+        ) {
+          nextWave.push(downstreamId);
+          enqueuedInNext.add(downstreamId);
+        }
       }
     }
+
+    if (waveWires.length > 0) waves.push(waveWires);
+    currentWave = nextWave;
   }
 
   // Rebuild the wire map with computed signal values.
@@ -99,5 +106,13 @@ export function propagateSignals(state: CircuitState): CircuitState {
     updatedWires.set(wireId, { ...wire, signal: wireSignal.get(wireId) });
   }
 
-  return { nodes: state.nodes, wires: updatedWires };
+  return { state: { nodes: state.nodes, wires: updatedWires }, waves };
+}
+
+/**
+ * Computes signal values for every wire in the circuit.
+ * Delegates to propagateSignalsLayered; the wave data is discarded.
+ */
+export function propagateSignals(state: CircuitState): CircuitState {
+  return propagateSignalsLayered(state).state;
 }

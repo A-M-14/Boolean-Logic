@@ -3,13 +3,15 @@ import type { SimulatorMode } from './types.js';
 import './SimulatorControls.css';
 
 interface SimulatorControlsProps {
-  mode:    SimulatorMode;
-  onRun:   () => void;
-  onStop:  () => void;
-  onReset: () => void;
+  mode:     SimulatorMode;
+  hasNodes: boolean;
+  onRun:    () => void;
+  onStop:   () => void;
+  onReset:  () => void;
+  onClear:  () => void;
 }
 
-export function SimulatorControls({ mode, onRun, onStop, onReset }: SimulatorControlsProps) {
+export function SimulatorControls({ mode, hasNodes, onRun, onStop, onReset, onClear }: SimulatorControlsProps) {
   return (
     <div className="sim-controls">
       <button
@@ -36,6 +38,15 @@ export function SimulatorControls({ mode, onRun, onStop, onReset }: SimulatorCon
         title="Clear all computed signal values"
       >
         ↺ Reset
+      </button>
+
+      <button
+        className="sim-controls__btn sim-controls__btn--clear"
+        onClick={onClear}
+        disabled={!hasNodes}
+        title="Remove all nodes and wires"
+      >
+        ✕ Clear
       </button>
     </div>
   );

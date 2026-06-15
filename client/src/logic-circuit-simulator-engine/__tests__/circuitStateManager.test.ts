@@ -228,7 +228,7 @@ describe('applySignals', () => {
     const dst = mgr.addNode(outputInit);
     const wId = mgr.addWire({ nodeId: src, portIndex: 0 }, { nodeId: dst, portIndex: 0 });
 
-    const phantom = { id: 'ghost', from: { nodeId: src, portIndex: 0 }, to: { nodeId: dst, portIndex: 0 }, signal: true as const };
+    const phantom = { id: 'ghost', from: { nodeId: src, portIndex: 0 }, to: { nodeId: dst, portIndex: 0 }, signal: true as const, waypoints: [] as const };
     expect(() => mgr.applySignals(new Map([['ghost', phantom]]))).not.toThrow();
     expect(mgr.getState().wires.get(wId)!.signal).toBeUndefined();
   });

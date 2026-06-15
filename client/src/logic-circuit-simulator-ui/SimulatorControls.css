@@ -41,3 +41,9 @@
   color:        #64ffda;
   box-shadow:   0 0 8px #64ffda22;
 }
+
+.sim-controls__btn--clear:not(:disabled):hover {
+  border-color: #f87171;
+  color:        #f87171;
+  box-shadow:   0 0 8px #f8717122;
+}

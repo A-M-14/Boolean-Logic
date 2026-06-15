@@ -15,4 +15,4 @@ export type {
 } from './types.js';
 
 export { CircuitStateManager } from './circuitStateManager.js';
-export { propagateSignals }    from './signalPropagator.js';
+export { propagateSignals, propagateSignalsLayered } from './signalPropagator.js';

@@ -1,0 +1,126 @@
+.rules-overlay {
+  position:   fixed;
+  inset:      0;
+  background: #0007;
+  display:    flex;
+  align-items: center;
+  justify-content: center;
+  z-index:    50;
+  padding:    1rem;
+  animation:  overlayFadeIn 0.2s ease both;
+}
+
+.rules-dialog {
+  position:       relative;
+  background:     #1a1730;
+  border:         1px solid #a78bfa44;
+  border-radius:  16px;
+  padding:        2rem;
+  max-width:      520px;
+  width:          100%;
+  max-height:     85vh;
+  overflow-y:     auto;
+  animation:      dialogSlide 0.22s ease both;
+  box-shadow:     0 24px 80px #0009;
+}
+
+.rules-dialog__close {
+  position:    absolute;
+  top:         1rem;
+  right:       1rem;
+  background:  none;
+  border:      none;
+  color:       #475569;
+  font-size:   1.1rem;
+  cursor:      pointer;
+  padding:     0.2rem 0.5rem;
+  border-radius: 6px;
+  transition:  color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.rules-dialog__close:hover {
+  color:      #e2e8f0;
+  background: #2d2a50;
+}
+
+.rules-dialog__title {
+  font-size:   1.5rem;
+  font-weight: 700;
+  color:       #a78bfa;
+  margin:      0 0 1.5rem;
+}
+
+.rules-dialog__body {
+  display:        flex;
+  flex-direction: column;
+  gap:            1.25rem;
+}
+
+.rules-dialog__section h3 {
+  font-size:   0.85rem;
+  font-weight: 700;
+  color:       #64ffda;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin:      0 0 0.5rem;
+}
+
+.rules-dialog__section p {
+  color:       #94a3b8;
+  font-size:   0.88rem;
+  line-height: 1.65;
+  margin:      0 0 0.5rem;
+}
+
+.rules-dialog__section ul {
+  color:       #94a3b8;
+  font-size:   0.88rem;
+  line-height: 1.7;
+  margin:      0;
+  padding-left: 1.2rem;
+}
+
+.rules-dialog__section strong { color: #e2e8f0; }
+
+.rules-dialog__gate-table {
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       0.83rem;
+}
+
+.rules-dialog__gate-table th,
+.rules-dialog__gate-table td {
+  padding:     0.35rem 0.6rem;
+  text-align:  left;
+  border-bottom: 1px solid #2d2a50;
+}
+
+.rules-dialog__gate-table th {
+  color:       #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size:   0.75rem;
+}
+
+.rules-dialog__gate-table td:first-child {
+  font-weight: 700;
+  color:       #a78bfa;
+  font-family: system-ui, monospace;
+  width:       3.5rem;
+}
+
+.rules-dialog__gate-table td:last-child { color: #94a3b8; }
+
+.rules-dialog__gate-table tr:last-child td { border-bottom: none; }
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes dialogSlide {
+  from { opacity: 0; transform: scale(0.94) translateY(-12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);     }
+}

@@ -1,0 +1,72 @@
+.gate-tooltip__backdrop {
+  position: fixed;
+  inset:    0;
+  z-index:  999;
+}
+
+.gate-tooltip {
+  position:       fixed;
+  transform:      translateX(-50%);
+  z-index:        1000;
+  background:     #1e1b3a;
+  border:         1px solid #a78bfa55;
+  border-radius:  8px;
+  padding:        0.45rem 0.7rem;
+  font-size:      0.75rem;
+  color:          #e2e8f0;
+  white-space:    nowrap;
+  box-shadow:     0 4px 16px #0008;
+  animation:      tooltipFadeIn 0.15s ease both;
+  pointer-events: none;
+}
+
+/* Arrow pointing down (tooltip above gate) */
+.gate-tooltip:not(.gate-tooltip--below)::after {
+  content:          '';
+  position:         absolute;
+  top:              100%;
+  left:             50%;
+  transform:        translateX(-50%);
+  border:           5px solid transparent;
+  border-top-color: #a78bfa55;
+}
+
+/* Arrow pointing up (tooltip below gate) */
+.gate-tooltip--below::after {
+  content:             '';
+  position:            absolute;
+  bottom:              100%;
+  left:                50%;
+  transform:           translateX(-50%);
+  border:              5px solid transparent;
+  border-bottom-color: #a78bfa55;
+}
+
+.gate-tooltip__gate {
+  font-weight:   700;
+  color:         #a78bfa;
+  font-size:     0.8rem;
+  margin-bottom: 0.25rem;
+  text-align:    center;
+}
+
+.gate-tooltip__row {
+  display:     flex;
+  gap:         0.4rem;
+  align-items: center;
+}
+
+.gate-tooltip__label { color: #64748b; }
+
+.gate-tooltip__value {
+  font-weight: 700;
+  color:       #64ffda;
+  min-width:   1ch;
+}
+
+.gate-tooltip__value--na { color: #475569; }
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
+}

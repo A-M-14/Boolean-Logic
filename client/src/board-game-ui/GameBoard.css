@@ -1,0 +1,40 @@
+.game-board {
+  display:               grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows:    repeat(7, 1fr);
+  gap:                   3px;
+  width:                 min(98vw, 480px);
+  height:                min(98vw, 480px);
+  background:            #0a0818;
+  border:                2px solid #2d2a50;
+  border-radius:         12px;
+  padding:               6px;
+  box-shadow:            0 8px 40px #0006;
+}
+
+.game-board__cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Blocks cell pointer events while a bit selector popup is open */
+.game-board--selector-open .bit-cell,
+.game-board--selector-open .gate-cell {
+  pointer-events: none;
+}
+
+/* Blocks all pointer interaction during computer's turn */
+.game-board--disabled {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+@media (min-width: 600px) {
+  .game-board {
+    width:  min(92vw, 560px);
+    height: min(92vw, 560px);
+    gap:    4px;
+    padding: 8px;
+  }
+}

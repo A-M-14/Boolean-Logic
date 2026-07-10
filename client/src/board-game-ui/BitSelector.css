@@ -1,0 +1,82 @@
+.bit-selector__backdrop {
+  position: fixed;
+  inset:    0;
+  z-index:  999;
+}
+
+.bit-selector {
+  position:       fixed;
+  transform:      translateX(-50%);
+  display:        flex;
+  gap:            0.5rem;
+  background:     #1e1b3a;
+  border:         1px solid #2d2a50;
+  border-radius:  10px;
+  padding:        0.5rem;
+  z-index:        1000;
+  box-shadow:     0 8px 32px #0009;
+  animation:      selectorPop 0.12s ease both;
+}
+
+.bit-selector__option {
+  width:           2.2rem;
+  height:          2.2rem;
+  border-radius:   8px;
+  border:          2px solid transparent;
+  font-size:       1.1rem;
+  font-weight:     700;
+  cursor:          pointer;
+  transition:      transform 0.12s, box-shadow 0.12s;
+  font-family:     system-ui, monospace;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+}
+
+.bit-selector__option--zero {
+  background:   #0f1c2e;
+  color:        #94a3b8;
+  border-color: #334155;
+}
+
+.bit-selector__option--zero:hover {
+  background:   #1e2d42;
+  border-color: #64748b;
+  transform:    scale(1.1);
+  box-shadow:   0 0 10px #33415533;
+}
+
+.bit-selector__option--one {
+  background:   #0a1e1a;
+  color:        #64ffda;
+  border-color: #1a4a40;
+}
+
+.bit-selector__option--one:hover {
+  background:   #0d2a24;
+  border-color: #64ffda;
+  transform:    scale(1.1);
+  box-shadow:   0 0 10px #64ffda33;
+}
+
+.bit-selector__option--empty {
+  background:   #0d0b1e;
+  color:        #475569;
+  border-color: #1e1b3a;
+}
+
+.bit-selector__option--empty:hover {
+  background:   #1a1730;
+  border-color: #475569;
+  transform:    scale(1.1);
+}
+
+.bit-selector__option--active {
+  filter:     brightness(1.6);
+  box-shadow: 0 0 8px currentColor;
+}
+
+@keyframes selectorPop {
+  from { opacity: 0; transform: translateX(-50%) scale(0.85); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1);    }
+}

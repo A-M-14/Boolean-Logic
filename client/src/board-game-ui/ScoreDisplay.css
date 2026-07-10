@@ -1,0 +1,87 @@
+.score-display {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             1.5rem;
+  background:      #1a1730;
+  border:          1px solid #2d2a50;
+  border-radius:   10px;
+  padding:         0.6rem 2rem;
+  width:           100%;
+  max-width:       360px;
+  font-family:     system-ui, monospace;
+}
+
+.score-display__side {
+  display:     flex;
+  align-items: center;
+  gap:         0.6rem;
+}
+
+.score-display__player-label {
+  font-size:      0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight:    600;
+}
+
+.score-display__side--blue .score-display__player-label { color: #60a5fa; }
+.score-display__side--red  .score-display__player-label { color: #f87171; }
+
+.score-display__value {
+  font-size:   1.6rem;
+  font-weight: 800;
+  min-width:   2ch;
+  text-align:  center;
+  line-height: 1;
+}
+
+.score-display__side--blue .score-display__value { color: #93c5fd; }
+.score-display__side--red  .score-display__value { color: #fca5a5; }
+
+.score-display--solo {
+  gap:        1rem;
+  max-width:  520px;
+  flex-wrap:  wrap;
+}
+
+.score-display__stat {
+  display:     flex;
+  align-items: baseline;
+  gap:         0.4rem;
+}
+
+.score-display__stat-label {
+  font-size:      0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight:    600;
+  color:          #64748b;
+  white-space:    nowrap;
+}
+
+.score-display__stat-value {
+  font-size:   1.3rem;
+  font-weight: 800;
+  min-width:   2ch;
+  line-height: 1;
+  color:       #e2e8f0;
+}
+
+.score-display__stat-value--red { color: #fca5a5; }
+
+.score-display__stat-divider {
+  width:        1px;
+  height:       1.4rem;
+  background:   #2d2a50;
+  flex-shrink:  0;
+  align-self:   center;
+}
+
+.score-display__divider {
+  font-size:   0.75rem;
+  color:       #475569;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}

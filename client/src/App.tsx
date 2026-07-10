@@ -3,9 +3,9 @@ import type { Difficulty } from '@boolean-logic/shared';
 import type { GameType } from './formula-games-ui/types.js';
 import { FormulaGameSession } from './formula-games-ui/FormulaGameSession.js';
 import { CircuitSimulator } from './logic-circuit-simulator-ui/index.js';
+import { BoardGameSession } from './board-game-ui/index.js';
+import type { BoardMode } from './board-game-ui/index.js';
 import './App.css';
-
-type BoardMode       = 'single' | 'one-on-one' | 'vs-computer';
 type FormulaPlayMode = 'solo'   | 'one-on-one';
 
 type Screen =
@@ -393,18 +393,17 @@ export function App() {
     }
 
     case 'board-game': {
-      const { boardMode } = screen;
+      const { boardMode, difficulty } = screen;
       return (
-        <div className="app">
-          <ComingSoon
-            label="Board Game"
-            onBack={() =>
-              boardMode === 'vs-computer'
-                ? navigate({ id: 'board-level', boardMode })
-                : navigate({ id: 'board-mode' })
-            }
-          />
-        </div>
+        <BoardGameSession
+          boardMode={boardMode}
+          difficulty={difficulty}
+          onBack={() =>
+            boardMode === 'vs-computer'
+              ? navigate({ id: 'board-level', boardMode })
+              : navigate({ id: 'board-mode' })
+          }
+        />
       );
     }
 

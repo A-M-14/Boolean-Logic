@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import type { Wire, Position } from '../logic-circuit-simulator-engine/index.js';
+import type { Wire, Waypoint, Position } from '../logic-circuit-simulator-engine/index.js';
 import type { CircuitState } from '../logic-circuit-simulator-engine/index.js';
-import { sigColor, getOutputPort, getInputPort, portWireDir, STUB_LEN } from './utils.js';
+import { sigColor, getOutputPort, getInputPort, portWireDir, buildWirePoints, deduplicateWirePath } from './utils.js';
 
 /** Length of the traveling dash in SVG user units (px). */
 const HALO_LEN = 3;
@@ -22,41 +22,24 @@ interface WireProps {
   futureSignal:   boolean | undefined;
   /** How long the halo takes to travel this wire, in milliseconds. */
   animDurationMs: number;
+  /** Incremented each time this wire is re-animated (feedback / multi-wave). */
+  animRev:        number;
   onDblClick:     () => void;
 }
 
 function buildWirePath(
   from: Position, fromDir: Position,
-  waypoints: readonly Position[],
+  waypoints: readonly Waypoint[],
   to: Position, toDir: Position,
+  routeDir: 'H' | 'V',
 ): string {
-  // Stubs scale down on very short wires so they never overlap each other.
-  const approxLen = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-  const stub = Math.min(STUB_LEN, approxLen / 4);
-
-  // Exit stub: straight segment leaving the from-port in its direction.
-  const exitPt:  Position = { x: from.x + fromDir.x * stub, y: from.y + fromDir.y * stub };
-  // Entry stub: straight segment arriving at the to-port from its direction.
-  const entryPt: Position = { x: to.x   - toDir.x  * stub, y: to.y   - toDir.y  * stub };
-
-  // Single continuous path: exit stub → L-routed middle → entry stub → port
-  let d = `M${from.x},${from.y} L${exitPt.x},${exitPt.y}`;
-
-  const pts = [exitPt, ...waypoints, entryPt];
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1], b = pts[i];
-    if (Math.abs(b.x - a.x) >= Math.abs(b.y - a.y)) {
-      d += ` L${b.x},${a.y} L${b.x},${b.y}`;
-    } else {
-      d += ` L${a.x},${b.y} L${b.x},${b.y}`;
-    }
-  }
-
-  d += ` L${to.x},${to.y}`;
+  const clean = deduplicateWirePath(buildWirePoints(from, fromDir, waypoints, to, toDir, routeDir));
+  let d = `M${clean[0].x},${clean[0].y}`;
+  for (let i = 1; i < clean.length; i++) d += ` L${clean[i].x},${clean[i].y}`;
   return d;
 }
 
-export function Wire({ wire, cs, isPropagating, futureSignal, animDurationMs, onDblClick }: WireProps) {
+export function Wire({ wire, cs, isPropagating, futureSignal, animDurationMs, animRev, onDblClick }: WireProps) {
   const fromNode = cs.nodes.get(wire.from.nodeId);
   const toNode   = cs.nodes.get(wire.to.nodeId);
   if (!fromNode || !toNode) return null;
@@ -65,7 +48,7 @@ export function Wire({ wire, cs, isPropagating, futureSignal, animDurationMs, on
   const tp      = getInputPort(toNode,   wire.to.portIndex);
   const fromDir = portWireDir(fromNode.rotation);
   const toDir   = portWireDir(toNode.rotation);
-  const pathD   = buildWirePath(fp, fromDir, wire.waypoints, tp, toDir);
+  const pathD   = buildWirePath(fp, fromDir, wire.waypoints, tp, toDir, wire.routeDir);
 
   const baseRef  = useRef<SVGPathElement>(null);
   const trailRef = useRef<SVGPathElement>(null);
@@ -79,7 +62,7 @@ export function Wire({ wire, cs, isPropagating, futureSignal, animDurationMs, on
     if (!isPropagating) return;
     if (trailRef.current) trailRef.current.style.opacity = '0';
     if (haloRef.current)  haloRef.current.style.opacity  = '0';
-  }, [isPropagating]);
+  }, [isPropagating, animRev]);
 
   useEffect(() => {
     if (!isPropagating) return;
@@ -129,7 +112,7 @@ export function Wire({ wire, cs, isPropagating, futureSignal, animDurationMs, on
         rafRef.current = null;
       }
     };
-  }, [isPropagating]);
+  }, [isPropagating, animRev]);
 
   return (
     <>

@@ -74,6 +74,51 @@
   filter:     brightness(1.15);
 }
 
+/* ── Split output-count selector ───────────────────────────────────────────── */
+
+.split-count-selector {
+  position:       fixed;
+  transform:      translateX(-50%);
+  display:        flex;
+  flex-direction: row;
+  gap:            4px;
+  padding:        4px;
+  background:     #1e1b3a;
+  border:         1px solid #4a4a8a;
+  border-radius:  8px;
+  z-index:        100;
+}
+
+.split-count-btn {
+  width:         40px;
+  height:        40px;
+  border-radius: 6px;
+  border:        2px solid #64748b;
+  font-size:     16px;
+  font-weight:   700;
+  font-family:   Georgia, serif;
+  cursor:        pointer;
+  background:    #64748b18;
+  color:         #64748b;
+  line-height:   1;
+  transition:    background 0.1s, filter 0.1s, transform 0.08s;
+}
+
+.split-count-btn:hover {
+  background: #64748b32;
+  filter:     brightness(1.2);
+}
+
+.split-count-btn:active {
+  transform: scale(0.93);
+}
+
+.split-count-btn--active {
+  border-color: #64ffda;
+  color:        #64ffda;
+  background:   #64ffda18;
+}
+
 /* ── Remove zone ───────────────────────────────────────────────────────────── */
 
 .remove-zone {

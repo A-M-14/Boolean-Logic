@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useDroppable } from '@dnd-kit/core';
 import { zoom as d3Zoom } from 'd3-zoom';
 import { select } from 'd3-selection';
-import type { CircuitState, NodeId, Position, WireId } from '../logic-circuit-simulator-engine/index.js';
+import type { CircuitState, NodeId, Position, Waypoint, WireId } from '../logic-circuit-simulator-engine/index.js';
 import type { PendingWire, ZoomState } from './types.js';
 import { GateNode }       from './GateNode.js';
 import { CircuitInput }   from './CircuitInput.js';
@@ -19,7 +19,7 @@ export const CANVAS_DROP_ID = 'circuit-canvas';
 
 function buildPendingPath(
   from: Position, fromDir: Position,
-  waypoints: Position[], mouse: Position, dir: 'H' | 'V',
+  waypoints: readonly Waypoint[], mouse: Position, dir: 'H' | 'V',
 ): string {
   // Exit stub: straight segment leaving the port in its direction.
   const approxLen = Math.abs(mouse.x - from.x) + Math.abs(mouse.y - from.y);
@@ -30,36 +30,52 @@ function buildPendingPath(
   let d = `M${from.x},${from.y} L${exitPt.x},${exitPt.y}`;
   let cur = exitPt;
 
-  for (const wp of waypoints) {
-    if (Math.abs(wp.x - cur.x) >= Math.abs(wp.y - cur.y)) {
-      d += ` L${wp.x},${cur.y} L${wp.x},${wp.y}`;
+  // Waypoint segments.
+  // Index 0 (first segment from exitPt): Z-shape — same formula as the
+  // no-waypoints preview so the path doesn't change shape when clicking.
+  // Index > 0: standard 2-segment L-bend using the stored enterDir.
+  for (let i = 0; i < waypoints.length; i++) {
+    const wp = waypoints[i];
+    if (i === 0) {
+      if (Math.abs(fromDir.x) >= Math.abs(fromDir.y)) {
+        const span = (wp.pos.x - cur.x) * fromDir.x;
+        const tx   = cur.x + fromDir.x * Math.max(0, span * 0.5);
+        d += ` L${tx},${cur.y} L${tx},${wp.pos.y} L${wp.pos.x},${wp.pos.y}`;
+      } else {
+        const span = (wp.pos.y - cur.y) * fromDir.y;
+        const ty   = cur.y + fromDir.y * Math.max(0, span * 0.5);
+        d += ` L${cur.x},${ty} L${wp.pos.x},${ty} L${wp.pos.x},${wp.pos.y}`;
+      }
+    } else if (wp.enterDir === 'H') {
+      d += ` L${cur.x},${wp.pos.y} L${wp.pos.x},${wp.pos.y}`;
     } else {
-      d += ` L${cur.x},${wp.y} L${wp.x},${wp.y}`;
+      d += ` L${wp.pos.x},${cur.y} L${wp.pos.x},${wp.pos.y}`;
     }
-    cur = wp;
+    cur = wp.pos;
   }
 
+  // Last segment to the mouse cursor.
+  // No waypoints: Z-shape so the tip keeps pointing in the port's direction
+  // and the rise/fall happens in the middle (not at the gate exit).
+  //   H port: ─H─ midpoint ─V─ ─H─ mouse  (tip arrives horizontally)
+  //   V port: ─V─ midpoint ─H─ ─V─ mouse  (tip arrives vertically)
+  // With waypoints: standard 2-segment L-bend using the user-locked direction.
   if (waypoints.length === 0) {
-    // No waypoints: L-shape.  The exit stub already provides the initial primary-
-    // direction segment, so arriving at mouse in `dir` is all that's needed.
-    if (dir === 'H') {
-      d += ` L${cur.x},${mouse.y} L${mouse.x},${mouse.y}`;
+    if (Math.abs(fromDir.x) >= Math.abs(fromDir.y)) {
+      // H port — Z-shape with horizontal midpoint turn.
+      const span = (mouse.x - cur.x) * fromDir.x; // positive if mouse is forward
+      const tx   = cur.x + fromDir.x * Math.max(0, span * 0.5);
+      d += ` L${tx},${cur.y} L${tx},${mouse.y} L${mouse.x},${mouse.y}`;
     } else {
-      d += ` L${mouse.x},${cur.y} L${mouse.x},${mouse.y}`;
+      // V port — Z-shape with vertical midpoint turn.
+      const span = (mouse.y - cur.y) * fromDir.y;
+      const ty   = cur.y + fromDir.y * Math.max(0, span * 0.5);
+      d += ` L${cur.x},${ty} L${mouse.x},${ty} L${mouse.x},${mouse.y}`;
     }
+  } else if (dir === 'H') {
+    d += ` L${cur.x},${mouse.y} L${mouse.x},${mouse.y}`;
   } else {
-    // After a waypoint: Z-shape — primary → perpendicular at midpoint → primary.
-    // The wire exits the waypoint in the locked primary direction, makes its
-    // perpendicular adjustment halfway between the waypoint and the mouse, then
-    // continues in the primary direction to the mouse.  This prevents the wire
-    // from appearing to "turn" at the waypoint when the mouse moves sideways.
-    if (dir === 'H') {
-      const midX = (cur.x + mouse.x) / 2;
-      d += ` L${midX},${cur.y} L${midX},${mouse.y} L${mouse.x},${mouse.y}`;
-    } else {
-      const midY = (cur.y + mouse.y) / 2;
-      d += ` L${cur.x},${midY} L${mouse.x},${midY} L${mouse.x},${mouse.y}`;
-    }
+    d += ` L${mouse.x},${cur.y} L${mouse.x},${mouse.y}`;
   }
 
   return d;
@@ -79,12 +95,13 @@ interface CircuitCanvasProps {
   onNodeDelete:     (nodeId: NodeId) => void;
   onNodeRotate:     (nodeId: NodeId) => void;
   onOutPort:        (nodeId: NodeId, portIndex: number, e: React.MouseEvent) => void;
-  /** Called when user completes a wire by clicking an input port. Includes any planted waypoints. */
-  onInPort:         (nodeId: NodeId, portIndex: number, waypoints: Position[]) => void;
-  onWireDelete:      (wireId: string) => void;
-  onPendingMove:     (pos: Position) => void;
-  onCancelPending:   () => void;
-  onInputSetValue:   (nodeId: NodeId, value: boolean) => void;
+  /** Called when user completes a wire by clicking an input port. Includes any planted waypoints and the locked routing direction. */
+  onInPort:         (nodeId: NodeId, portIndex: number, waypoints: Waypoint[], routeDir: 'H' | 'V') => void;
+  onWireDelete:         (wireId: string) => void;
+  onPendingMove:        (pos: Position) => void;
+  onCancelPending:      () => void;
+  onInputSetValue:      (nodeId: NodeId, value: boolean) => void;
+  onSplitSetOutputCount:(nodeId: NodeId, count: number) => void;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -93,7 +110,7 @@ export function CircuitCanvas({
   cs, pending, zoomState, propagatingWires, onZoomChange,
   onNodeDrag, onNodeDragEnd, onNodeDelete, onNodeRotate,
   onOutPort, onInPort, onWireDelete,
-  onPendingMove, onCancelPending, onInputSetValue,
+  onPendingMove, onCancelPending, onInputSetValue, onSplitSetOutputCount,
 }: CircuitCanvasProps) {
 
   const svgRef     = useRef<SVGSVGElement>(null);
@@ -104,10 +121,11 @@ export function CircuitCanvas({
   const lockedDirRef = useRef<'H' | 'V' | null>(null);
 
   const [contextMenuNodeId, setContextMenuNodeId] = useState<NodeId | null>(null);
-  const [waypoints,         setWaypoints]         = useState<Position[]>([]);
+  const [splitMenuNodeId,   setSplitMenuNodeId]   = useState<NodeId | null>(null);
+  const [waypoints,         setWaypoints]         = useState<Waypoint[]>([]);
   // Ref that always mirrors `waypoints` so event-handler closures see the
   // latest list without depending on React re-renders.
-  const waypointsRef = useRef<Position[]>([]);
+  const waypointsRef = useRef<Waypoint[]>([]);
   waypointsRef.current = waypoints;
 
   // ── Remove zone ────────────────────────────────────────────────────────────
@@ -136,6 +154,17 @@ export function CircuitCanvas({
     document.addEventListener('pointerdown', handleOutside, true);
     return () => document.removeEventListener('pointerdown', handleOutside, true);
   }, [contextMenuNodeId]);
+
+  // Close split output-count menu on outside click
+  useEffect(() => {
+    if (!splitMenuNodeId) return;
+    function handleOutside(e: PointerEvent) {
+      if ((e.target as Element).closest?.('[data-split-menu]')) return;
+      setSplitMenuNodeId(null);
+    }
+    document.addEventListener('pointerdown', handleOutside, true);
+    return () => document.removeEventListener('pointerdown', handleOutside, true);
+  }, [splitMenuNodeId]);
 
   // @dnd-kit drop target
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: CANVAS_DROP_ID });
@@ -213,21 +242,15 @@ export function CircuitCanvas({
           // After a waypoint: wait for at least 8px of deliberate movement before
           // locking direction — prevents a tiny accidental mouse shift at click
           // time from locking the wrong axis.
-          const ref = wps[wps.length - 1];
+          const ref = wps[wps.length - 1].pos;
           const dx = pos.x - ref.x;
           const dy = pos.y - ref.y;
           if (Math.abs(dx) + Math.abs(dy) >= 8) {
             lockedDirRef.current = Math.abs(dx) >= Math.abs(dy) ? 'H' : 'V';
           }
-        } else {
-          // No waypoints yet: lock immediately to the port's own axis so the wire
-          // exits in the port direction until the user plants the first waypoint.
-          const n = cs.nodes.get(pending.fromNodeId);
-          if (n) {
-            const d = portWireDir(n.rotation);
-            lockedDirRef.current = d.x !== 0 ? 'H' : 'V';
-          }
         }
+        // No waypoints: routing is port-direction-first; lockedDirRef stays
+        // null until the first waypoint is planted.
       }
       onPendingMove(pos);
     }
@@ -259,8 +282,14 @@ export function CircuitCanvas({
       if (clickTimer.current) return; // second tap of a dblclick — skip
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null;
+        // enterDir for the first waypoint is unused in rendering (the first
+        // segment uses Z-shape computed geometrically from the source port).
+        // For all waypoints it is the direction locked by mouse movement, which
+        // is what buildPendingPath/buildWirePath use for segments i > 0.
+        const enterDir: 'H' | 'V' = lockedDirRef.current ?? 'H';
+        const newWp: Waypoint = { pos: circuitPos, enterDir };
         setWaypoints(wps => {
-          const newWps = [...wps, circuitPos];
+          const newWps = [...wps, newWp];
           // Update the ref synchronously so the very next mousemove sees the
           // new waypoint as its reference point when re-detecting direction.
           waypointsRef.current = newWps;
@@ -291,9 +320,14 @@ export function CircuitCanvas({
     return (e: React.MouseEvent) => {
       if (!movedRef.current) {
         e.stopPropagation();
-        // Only input nodes open a selector on single click.
-        if (cs.nodes.get(nodeId)?.type === 'input') {
+        const type = cs.nodes.get(nodeId)?.type;
+        if (type === 'input') {
+          setSplitMenuNodeId(null);
           setContextMenuNodeId(id => id === nodeId ? null : nodeId);
+        }
+        if (type === 'split') {
+          setContextMenuNodeId(null);
+          setSplitMenuNodeId(id => id === nodeId ? null : nodeId);
         }
       }
     };
@@ -389,23 +423,21 @@ export function CircuitCanvas({
               isPropagating={propagatingWires.has(w.id)}
               futureSignal={propagatingWires.get(w.id)?.signal}
               animDurationMs={propagatingWires.get(w.id)?.durationMs ?? 2400}
+              animRev={propagatingWires.get(w.id)?.rev ?? 0}
               onDblClick={() => onWireDelete(w.id)}
             />
           ))}
 
           {/* Pending wire preview */}
           {pendingFrom && pending && (() => {
-            // During the detection phase (direction not yet locked after a waypoint
-            // click) derive direction dynamically from displacement so the preview
-            // always looks correct.  Once locked, the direction is fixed — moving
-            // perpendicular only shifts the L-bend but keeps the primary axis at
-            // the mouse end, which is the behaviour the user establishes on first
-            // move after clicking.
+            // pendingDir drives the last segment when waypoints exist.
+            // For no-waypoints, buildPendingPath uses the source port direction
+            // directly, so pendingDir is unused in that case.
             let pendingDir: 'H' | 'V' = lockedDirRef.current ?? 'H';
             if (lockedDirRef.current === null && waypoints.length > 0) {
               const lastWp = waypoints[waypoints.length - 1];
-              const dx = pending.mx - lastWp.x;
-              const dy = pending.my - lastWp.y;
+              const dx = pending.mx - lastWp.pos.x;
+              const dy = pending.my - lastWp.pos.y;
               pendingDir = Math.abs(dx) >= Math.abs(dy) ? 'H' : 'V';
             }
             return (
@@ -420,7 +452,7 @@ export function CircuitCanvas({
               {waypoints.map((wp, i) => (
                 <circle
                   key={i}
-                  cx={wp.x} cy={wp.y} r={4}
+                  cx={wp.pos.x} cy={wp.pos.y} r={4}
                   fill="#64ffda" stroke="#111827" strokeWidth={1.5}
                   style={{ pointerEvents: 'none' }}
                 />
@@ -435,8 +467,24 @@ export function CircuitCanvas({
             const dbl     = nodeDbl(node.id);
             const click   = nodeClick(node.id);
             const outPort = (e: React.MouseEvent, pi: number) => onOutPort(node.id, pi, e);
-            // Capture current waypoints at render time — correct for each click
-            const inPort  = (e: React.MouseEvent, pi: number) => onInPort(node.id, pi, waypoints);
+            // routeDir: for no-waypoints, use port-direction-first (same as
+            // buildPendingPath); for with-waypoints, use user-locked direction.
+            const inPort  = (e: React.MouseEvent, pi: number) => {
+              let routeDir: 'H' | 'V';
+              if (waypointsRef.current.length === 0 && pending) {
+                const srcNode = cs.nodes.get(pending.fromNodeId);
+                if (srcNode) {
+                  const fd = portWireDir(srcNode.rotation);
+                  // Z-shape arrives at destination H for H port, V for V port.
+                  routeDir = Math.abs(fd.x) >= Math.abs(fd.y) ? 'H' : 'V';
+                } else {
+                  routeDir = lockedDirRef.current ?? 'H';
+                }
+              } else {
+                routeDir = lockedDirRef.current ?? 'H';
+              }
+              onInPort(node.id, pi, waypointsRef.current, routeDir);
+            };
 
             if (node.type === 'gate') {
               return (
@@ -499,6 +547,38 @@ export function CircuitCanvas({
         </g>
       </svg>
     </div>
+
+    {/* Split output-count selector portal */}
+    {splitMenuNodeId && (() => {
+      const node = cs.nodes.get(splitMenuNodeId);
+      if (!node || node.type !== 'split') return null;
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return null;
+      const cx  = rect.left + node.position.x * zoomState.k + zoomState.x;
+      const top = rect.top  + node.position.y * zoomState.k + zoomState.y + 8 * zoomState.k + 6;
+      return createPortal(
+        <div
+          className="split-count-selector"
+          style={{ left: cx, top }}
+          data-split-menu
+        >
+          {([2, 3, 4] as const).map(n => (
+            <button
+              key={n}
+              className={`split-count-btn${node.outputCount === n ? ' split-count-btn--active' : ''}`}
+              onPointerDown={e => {
+                e.stopPropagation();
+                onSplitSetOutputCount(splitMenuNodeId, n);
+                setSplitMenuNodeId(null);
+              }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>,
+        document.body
+      );
+    })()}
 
     {/* Input value selector portal */}
     {contextMenuNodeId && (() => {

@@ -37,16 +37,30 @@ export function CircuitInput({
       </g>
 
       {/* Label — always horizontal at box center */}
-      <text
-        x={x} y={y}
-        textAnchor="middle" dominantBaseline="central"
-        fill={col}
-        fontSize={node.value !== null ? 18 : 9}
-        fontWeight={700}
-        style={{ fontFamily: node.value !== null ? 'Georgia, serif' : 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
-      >
-        {node.value === true ? '1' : node.value === false ? '0' : 'INPUT'}
-      </text>
+      {node.label !== undefined ? (
+        node.value !== null ? (
+          <>
+            <text x={x} y={y - 9} textAnchor="middle" dominantBaseline="central"
+              fill={col} fontSize={8} fontWeight={700}
+              style={{ fontFamily: 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
+            >{node.label}</text>
+            <text x={x} y={y + 7} textAnchor="middle" dominantBaseline="central"
+              fill={col} fontSize={16} fontWeight={700}
+              style={{ fontFamily: 'Georgia, serif', pointerEvents: 'none', userSelect: 'none' }}
+            >{node.value ? '1' : '0'}</text>
+          </>
+        ) : (
+          <text x={x} y={y} textAnchor="middle" dominantBaseline="central"
+            fill={col} fontSize={20} fontWeight={700}
+            style={{ fontFamily: 'Georgia, serif', pointerEvents: 'none', userSelect: 'none' }}
+          >{node.label}</text>
+        )
+      ) : (
+        <text x={x} y={y} textAnchor="middle" dominantBaseline="central"
+          fill={col} fontSize={node.value !== null ? 18 : 9} fontWeight={700}
+          style={{ fontFamily: node.value !== null ? 'Georgia, serif' : 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
+        >{node.value === true ? '1' : node.value === false ? '0' : 'INPUT'}</text>
+      )}
 
       {/* Output port */}
       <circle cx={pp.x} cy={pp.y} r={PORT_R}

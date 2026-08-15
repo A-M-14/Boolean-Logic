@@ -22,7 +22,8 @@ export interface GateNode extends BaseNode {
 }
 
 export interface InputNode extends BaseNode {
-  readonly type: 'input';
+  readonly type:  'input';
+  readonly label: string | undefined;   // variable name (A, B, C…); undefined when unlabelled
   readonly value: boolean | null;
 }
 
@@ -43,13 +44,26 @@ export interface Port {
   readonly portIndex: number;
 }
 
+/** A user-planted turn-point, together with the routing direction of the
+ *  segment that ARRIVES at this point (from the previous point).
+ *  'H' = arrive horizontally (go vertical first, then horizontal);
+ *  'V' = arrive vertically   (go horizontal first, then vertical). */
+export interface Waypoint {
+  readonly pos:      Position;
+  readonly enterDir: 'H' | 'V';
+}
+
 export interface Wire {
   readonly id: WireId;
   readonly from: Port;
   readonly to: Port;
   readonly signal: boolean | undefined;
   /** Intermediate turn-points in circuit space, in order from→to. */
-  readonly waypoints: readonly Position[];
+  readonly waypoints: readonly Waypoint[];
+  /** Routing direction of the final segment (last waypoint/exitPt → entryPt).
+   *  'H' = arrive at destination horizontally;
+   *  'V' = arrive vertically. */
+  readonly routeDir: 'H' | 'V';
 }
 
 export interface CircuitState {
@@ -60,6 +74,6 @@ export interface CircuitState {
 /** Payload passed to CircuitStateManager.addNode — id is assigned internally. */
 export type NodeInit =
   | { readonly type: 'gate';   readonly gateType: GateType; readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 }
-  | { readonly type: 'input';  readonly value?: boolean | null; readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 }
+  | { readonly type: 'input';  readonly label?: string; readonly value?: boolean | null; readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 }
   | { readonly type: 'output';                              readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 }
   | { readonly type: 'split'; readonly outputCount?: number; readonly position: Position; readonly rotation?: 0 | 90 | 180 | 270 };

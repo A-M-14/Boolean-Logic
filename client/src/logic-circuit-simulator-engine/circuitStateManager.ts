@@ -1,4 +1,4 @@
-import type { CircuitNode, CircuitState, NodeId, NodeInit, Port, Position, Wire, WireId } from './types.js';
+import type { CircuitNode, CircuitState, NodeId, NodeInit, Port, Position, Waypoint, Wire, WireId } from './types.js';
 
 /**
  * Single source of truth for a logic circuit's structure and state.
@@ -8,6 +8,7 @@ import type { CircuitNode, CircuitState, NodeId, NodeInit, Port, Position, Wire,
 export class CircuitStateManager {
   private readonly _nodes = new Map<NodeId, CircuitNode>();
   private readonly _wires = new Map<WireId, Wire>();
+  private readonly _stableSignals = new Map<WireId, boolean | undefined>();
   private _nodeSeq = 0;
   private _wireSeq = 0;
 
@@ -18,7 +19,7 @@ export class CircuitStateManager {
     if (init.type === 'split') {
       this._nodes.set(id, { type: 'split', id, position: init.position, rotation, outputCount: init.outputCount ?? 2 } as CircuitNode);
     } else if (init.type === 'input') {
-      this._nodes.set(id, { type: 'input', id, position: init.position, rotation, value: init.value ?? null } as CircuitNode);
+      this._nodes.set(id, { type: 'input', id, position: init.position, rotation, label: init.label, value: init.value ?? null } as CircuitNode);
     } else {
       this._nodes.set(id, { ...init, id, rotation } as CircuitNode);
     }
@@ -43,7 +44,7 @@ export class CircuitStateManager {
         toDelete.push(wireId);
       }
     }
-    for (const wireId of toDelete) this._wires.delete(wireId);
+    for (const wireId of toDelete) { this._wires.delete(wireId); this._stableSignals.delete(wireId); }
     this._nodes.set(nodeId, { ...node, outputCount });
   }
 
@@ -55,7 +56,7 @@ export class CircuitStateManager {
         toDelete.push(wireId);
       }
     }
-    for (const wireId of toDelete) this._wires.delete(wireId);
+    for (const wireId of toDelete) { this._wires.delete(wireId); this._stableSignals.delete(wireId); }
   }
 
   /** Removes a node and all wires connected to it. */
@@ -67,7 +68,7 @@ export class CircuitStateManager {
         toDelete.push(wireId);
       }
     }
-    for (const wireId of toDelete) this._wires.delete(wireId);
+    for (const wireId of toDelete) { this._wires.delete(wireId); this._stableSignals.delete(wireId); }
   }
 
   /** Updates the canvas position of a node (used when the user drags it). */
@@ -86,15 +87,16 @@ export class CircuitStateManager {
    * Adds a wire from an output port of one node to an input port of another.
    * Returns the generated wire id.
    */
-  addWire(from: Port, to: Port, waypoints: readonly Position[] = []): WireId {
+  addWire(from: Port, to: Port, waypoints: readonly Waypoint[] = [], routeDir: 'H' | 'V' = 'H'): WireId {
     const id: WireId = `wire-${++this._wireSeq}`;
-    this._wires.set(id, { id, from, to, signal: undefined, waypoints });
+    this._wires.set(id, { id, from, to, signal: undefined, waypoints, routeDir });
     return id;
   }
 
   /** Removes a single wire. */
   removeWire(wireId: WireId): void {
     this._wires.delete(wireId);
+    this._stableSignals.delete(wireId);
   }
 
   /** Writes the signal values computed by propagateSignals() back into the wire map. */
@@ -104,8 +106,22 @@ export class CircuitStateManager {
     }
   }
 
+  /** Returns the last converged wire signals, used as seed for the next propagation run. */
+  getStableSignals(): ReadonlyMap<WireId, boolean | undefined> {
+    return this._stableSignals;
+  }
+
+  /** Saves the converged signals from a propagation run as the new stable state. */
+  saveStableSignals(wires: ReadonlyMap<WireId, Wire>): void {
+    this._stableSignals.clear();
+    for (const [wireId, wire] of wires) {
+      if (this._wires.has(wireId)) this._stableSignals.set(wireId, wire.signal);
+    }
+  }
+
   /** Clears all computed signal values from every wire and resets all input node values to null. */
   resetSignals(): void {
+    this._stableSignals.clear();
     for (const [wireId, wire] of this._wires) {
       this._wires.set(wireId, { ...wire, signal: undefined });
     }
@@ -118,6 +134,7 @@ export class CircuitStateManager {
   clear(): void {
     this._nodes.clear();
     this._wires.clear();
+    this._stableSignals.clear();
   }
 
   /** Returns a snapshot of the current circuit state. */

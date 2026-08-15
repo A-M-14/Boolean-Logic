@@ -3,6 +3,7 @@ export type {
   NodeId,
   WireId,
   Position,
+  Waypoint,
   GateNode,
   InputNode,
   OutputNode,
@@ -16,3 +17,4 @@ export type {
 
 export { CircuitStateManager } from './circuitStateManager.js';
 export { propagateSignals, propagateSignalsLayered } from './signalPropagator.js';
+export type { PropagationWireEntry } from './signalPropagator.js';

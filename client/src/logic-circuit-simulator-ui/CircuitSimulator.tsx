@@ -12,15 +12,19 @@ import type { GateType } from '@boolean-logic/shared';
 import {
   CircuitStateManager,
   propagateSignals,
+  propagateSignalsLayered,
 } from '../logic-circuit-simulator-engine/index.js';
 import type {
   CircuitState,
+  InputNode,
   NodeId,
   Position,
+  Waypoint,
   Wire,
   WireId,
 } from '../logic-circuit-simulator-engine/index.js';
-import { getOutputPort, getInputPort } from './utils.js';
+import { VAR_NAMES } from '../simulator-challenge-engine/types.js';
+import { getOutputPort, getInputPort, portWireDir, buildWirePoints, deduplicateWirePath, wirePathHitsNode } from './utils.js';
 import type { SimulatorMode, ZoomState, PendingWire, PaletteItemData } from './types.js';
 import { ZOOM_IDENTITY } from './types.js';
 import { GateBody }          from './GateNode.js';
@@ -32,7 +36,7 @@ import './CircuitSimulator.css';
 // ── Animation helpers ──────────────────────────────────────────────────────────
 
 /** Per-wire animation info stored in the propagatingWires map. */
-type PropWireInfo = { signal: boolean | undefined; durationMs: number };
+type PropWireInfo = { signal: boolean | undefined; durationMs: number; rev: number };
 
 /** Speed constant and clamp bounds for wire animation duration. */
 const WIRE_SPEED   = 0.25 / 3;   // SVG user units (px) per millisecond
@@ -46,7 +50,7 @@ function manhattanWireLength(wire: Wire, cs: CircuitState): number {
   if (!fromNode || !toNode) return 100;
   const pts: Position[] = [
     getOutputPort(fromNode, wire.from.portIndex),
-    ...wire.waypoints,
+    ...wire.waypoints.map(w => w.pos),
     getInputPort(toNode, wire.to.portIndex),
   ];
   let total = 0;
@@ -122,9 +126,10 @@ function DragPreview({ data }: { data: PaletteItemData | null }) {
 
 export interface CircuitSimulatorProps {
   onBack: () => void;
+  challengeMode?: boolean;
 }
 
-export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
+export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProps) {
   const managerRef = useRef(new CircuitStateManager());
   const [cs, setCs]         = useState<CircuitState>(() => managerRef.current.getState());
   const [mode, setMode]     = useState<SimulatorMode>('idle');
@@ -164,8 +169,9 @@ export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
     cancelAnimation();
     const m = managerRef.current;
     if (propagate && mode === 'running') {
-      const fresh = propagateSignals(m.getState());
+      const fresh = propagateSignals(m.getState(), m.getStableSignals());
       m.applySignals(fresh.wires);
+      m.saveStableSignals(fresh.wires);
     }
     setCs(m.getState());
   }
@@ -173,8 +179,9 @@ export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
   function propagateAndRefresh() {
     cancelAnimation();
     const m     = managerRef.current;
-    const fresh = propagateSignals(m.getState());
+    const fresh = propagateSignals(m.getState(), m.getStableSignals());
     m.applySignals(fresh.wires);
+    m.saveStableSignals(fresh.wires);
     setCs(m.getState());
   }
 
@@ -185,128 +192,96 @@ export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
     cancelAnimation();
 
     const m = managerRef.current;
-    const finalState = propagateSignals(m.getState());
+    const stableSignals = m.getStableSignals();
+
+    // ── 1. Full fixed-point propagation (with seed from stable state) ─────────
+    const { state: finalState, waves } = propagateSignalsLayered(m.getState(), stableSignals);
     m.applySignals(finalState.wires);
+    m.saveStableSignals(finalState.wires);
     setCs(m.getState());
 
-    const { wires, nodes } = finalState;
+    if (waves.length === 0) return; // already stable — nothing to animate
 
-    // Only animate wires that carry a defined signal.
-    const signalWires = new Map(
-      Array.from(wires.entries()).filter(([, w]) => w.signal !== undefined),
-    );
-    if (signalWires.size === 0) return;
+    // ── 2. Initial animCs: all wires start gray; the dot reveals them ──────────
+    const initWires = new Map<WireId, Wire>();
+    for (const [wireId, wire] of finalState.wires) {
+      initWires.set(wireId, { ...wire, signal: undefined });
+    }
 
-    // ── 1. Wire durations ────────────────────────────────────────────────────
-    const wireDurMap = new Map<WireId, number>();
-    for (const [wireId, wire] of signalWires) {
+    // ── 3. Per-wire duration ──────────────────────────────────────────────────
+    function wireMs(wireId: WireId): number {
+      const wire = finalState.wires.get(wireId);
+      if (!wire) return WIRE_MIN_MS;
       const len = manhattanWireLength(wire, finalState);
-      wireDurMap.set(wireId, Math.min(Math.max(len / WIRE_SPEED, WIRE_MIN_MS), WIRE_MAX_MS));
+      return Math.min(Math.max(len / WIRE_SPEED, WIRE_MIN_MS), WIRE_MAX_MS);
     }
 
-    // ── 2. Topological traversal → per-wire start times ─────────────────────
-    // Each node becomes "ready" once all its incoming signal wires have arrived.
-    const outgoing  = new Map<NodeId, WireId[]>();
-    const inDegree  = new Map<NodeId, number>();
-    for (const [nodeId] of nodes) { outgoing.set(nodeId, []); inDegree.set(nodeId, 0); }
-    for (const [wireId, wire] of signalWires) {
-      outgoing.get(wire.from.nodeId)!.push(wireId);
-      inDegree.set(wire.to.nodeId, (inDegree.get(wire.to.nodeId) ?? 0) + 1);
-    }
-
-    const nodeReadyMs = new Map<NodeId, number>();
-    const queue: NodeId[] = [];
-    for (const [nodeId, deg] of inDegree) {
-      if (deg === 0) { queue.push(nodeId); nodeReadyMs.set(nodeId, 0); }
-    }
-
-    const wireStartMs = new Map<WireId, number>();
-    const wireEndMs   = new Map<WireId, number>();
-    let totalMs = 0;
-
-    for (let qi = 0; qi < queue.length; qi++) {
-      const nodeId    = queue[qi];
-      const readyTime = nodeReadyMs.get(nodeId) ?? 0;
-
-      for (const wireId of (outgoing.get(nodeId) ?? [])) {
-        const wire = signalWires.get(wireId)!;
-        const dur  = wireDurMap.get(wireId)!;
-        const et   = readyTime + dur;
-        wireStartMs.set(wireId, readyTime);
-        wireEndMs.set(wireId, et);
-        totalMs = Math.max(totalMs, et);
-
-        const toId     = wire.to.nodeId;
-        nodeReadyMs.set(toId, Math.max(nodeReadyMs.get(toId) ?? 0, et));
-        const newDeg = (inDegree.get(toId) ?? 1) - 1;
-        inDegree.set(toId, newDeg);
-        if (newDeg === 0) queue.push(toId);
-      }
-    }
-
-    // ── 3. Initial state: all wires blank ────────────────────────────────────
-    const blankWires = new Map(
-      Array.from(wires.entries()).map(([id, w]) => [id, { ...w, signal: undefined as boolean | undefined }]),
-    );
-
-    // t=0 wires start synchronously in the same React batch as setAnimCs.
-    const initProp = new Map<WireId, PropWireInfo>();
-    for (const [wireId, st] of wireStartMs) {
-      if (st === 0) {
-        initProp.set(wireId, { signal: signalWires.get(wireId)?.signal, durationMs: wireDurMap.get(wireId)! });
-      }
-    }
-    setAnimCs({ nodes, wires: blankWires });
-    if (initProp.size > 0) setPropagatingWires(initProp);
-
-    // ── 4. Schedule one callback per unique timestamp ────────────────────────
-    type Evt = { starts: WireId[]; ends: WireId[] };
-    const events = new Map<number, Evt>();
-    const getEvt = (t: number): Evt => {
-      if (!events.has(t)) events.set(t, { starts: [], ends: [] });
-      return events.get(t)!;
+    // ── 4. Build wave events with sequential timing ───────────────────────────
+    // Each wave animates all its wires simultaneously; next wave starts only
+    // after the longest wire in the current wave finishes.
+    //
+    // wireRevMap ensures that if the same wire appears in multiple waves
+    // (feedback confirmation), its animRev increments — retriggers Wire's
+    // useEffect even though isPropagating stays true.
+    type WaveEvent = {
+      endMs:       number;
+      propagating: Map<WireId, PropWireInfo>;
+      reveal:      Map<WireId, boolean | undefined>;
     };
-    for (const [wireId, st] of wireStartMs) {
-      if (st > 0) getEvt(st).starts.push(wireId);
-    }
-    for (const [wireId, et] of wireEndMs) {
-      getEvt(et).ends.push(wireId);
+
+    const wireRevMap = new Map<WireId, number>();
+    const waveEvents: WaveEvent[] = [];
+    let cursor = 0;
+
+    for (const waveEntries of waves) {
+      let maxDur = 0;
+      const propagating = new Map<WireId, PropWireInfo>();
+      const reveal      = new Map<WireId, boolean | undefined>();
+
+      for (const { wireId, signal } of waveEntries) {
+        const durationMs = wireMs(wireId);
+        const rev        = (wireRevMap.get(wireId) ?? 0) + 1;
+        wireRevMap.set(wireId, rev);
+        propagating.set(wireId, { signal, durationMs, rev });
+        reveal.set(wireId, signal);
+        maxDur = Math.max(maxDur, durationMs);
+      }
+
+      cursor += maxDur;
+      waveEvents.push({ endMs: cursor, propagating, reveal });
     }
 
-    for (const [time, { starts, ends }] of events) {
+    const totalMs = cursor;
+
+    // ── 5. Kick off animation ─────────────────────────────────────────────────
+    setAnimCs({ nodes: finalState.nodes, wires: initWires });
+    setPropagatingWires(waveEvents[0].propagating);
+
+    // Schedule one timeout per wave-end: reveal that wave's signals, then
+    // immediately start the next wave (or clear propagation if last wave).
+    for (let wi = 0; wi < waveEvents.length; wi++) {
+      const wave     = waveEvents[wi];
+      const nextWave = waveEvents[wi + 1] ?? null;
+
       const t = setTimeout(() => {
-        // Reveal finished wires first (so they appear colored as the dot departs).
-        if (ends.length > 0) {
-          setAnimCs(prev => {
-            if (!prev) return prev;
-            const nw = new Map(prev.wires);
-            for (const wireId of ends) {
-              const fw = wires.get(wireId);
-              if (fw) nw.set(wireId, fw);
-            }
-            return { nodes: prev.nodes, wires: nw };
-          });
-          setPropagatingWires(prev => {
-            const next = new Map(prev);
-            for (const wireId of ends) next.delete(wireId);
-            return next;
-          });
-        }
-        // Then start newly-ready wires.
-        if (starts.length > 0) {
-          setPropagatingWires(prev => {
-            const next = new Map(prev);
-            for (const wireId of starts) {
-              next.set(wireId, { signal: signalWires.get(wireId)?.signal, durationMs: wireDurMap.get(wireId)! });
-            }
-            return next;
-          });
-        }
-      }, time);
+        // Reveal this wave's wires with their wave signal.
+        setAnimCs(prev => {
+          if (!prev) return prev;
+          const nw = new Map(prev.wires);
+          for (const [wireId, signal] of wave.reveal) {
+            const fw = finalState.wires.get(wireId);
+            if (fw) nw.set(wireId, { ...fw, signal });
+          }
+          return { nodes: prev.nodes, wires: nw };
+        });
+        // Start next wave's halos (or clear if this was the last wave).
+        setPropagatingWires(nextWave ? nextWave.propagating : new Map<WireId, PropWireInfo>());
+      }, wave.endMs);
+
       animTimersRef.current.push(t);
     }
 
-    // ── 5. Final cleanup ─────────────────────────────────────────────────────
+    // ── 6. Final cleanup ──────────────────────────────────────────────────────
     const tDone = setTimeout(() => {
       setAnimCs(null);
       animTimersRef.current = [];
@@ -327,12 +302,19 @@ export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
   }
 
   function handleNodeRotate(nodeId: NodeId) {
-    managerRef.current.rotateNode(nodeId);
-    mode === 'running' ? propagateAndRefresh() : setCs(managerRef.current.getState());
+    const m = managerRef.current;
+    m.disconnectNode(nodeId);
+    m.rotateNode(nodeId);
+    mode === 'running' ? propagateAndRefresh() : setCs(m.getState());
   }
 
   function handleInputSetValue(nodeId: NodeId, value: boolean) {
     managerRef.current.setInputValue(nodeId, value);
+    mode === 'running' ? propagateAndRefresh() : setCs(managerRef.current.getState());
+  }
+
+  function handleSplitSetOutputCount(nodeId: NodeId, count: number) {
+    managerRef.current.setSplitOutputCount(nodeId, count);
     mode === 'running' ? propagateAndRefresh() : setCs(managerRef.current.getState());
   }
 
@@ -371,7 +353,19 @@ export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
 
     const m = managerRef.current;
     if (data.kind === 'gate')   m.addNode({ type: 'gate',   gateType: data.gateType as GateType, position });
-    if (data.kind === 'input')  m.addNode({ type: 'input', position });
+    if (data.kind === 'input') {
+      let label: string | undefined;
+      if (challengeMode) {
+        const usedLabels = new Set(
+          [...cs.nodes.values()]
+            .filter((n): n is InputNode => n.type === 'input')
+            .map(n => n.label)
+            .filter((l): l is string => l !== undefined),
+        );
+        label = VAR_NAMES.find(name => !usedLabels.has(name));
+      }
+      m.addNode({ type: 'input', label, position });
+    }
     if (data.kind === 'output') m.addNode({ type: 'output', position });
     if (data.kind === 'split')  m.addNode({ type: 'split',  position });
 
@@ -411,13 +405,39 @@ export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
     setPending({ fromNodeId: nodeId, fromPortIndex: portIndex, mx, my });
   }
 
-  function handleInPort(nodeId: NodeId, portIndex: number, waypoints: Position[]) {
+  function handleInPort(nodeId: NodeId, portIndex: number, waypoints: Waypoint[], routeDir: 'H' | 'V') {
     if (!pending) return;
     if (pending.fromNodeId === nodeId) { setPending(null); return; }
+
+    // Reject the wire if its path cuts through any node body (other than the
+    // two endpoints, which the wire legitimately connects to).
+    const fromNode = cs.nodes.get(pending.fromNodeId);
+    const toNode   = cs.nodes.get(nodeId);
+    if (!fromNode || !toNode) { setPending(null); return; }
+
+    const fp  = getOutputPort(fromNode, pending.fromPortIndex);
+    const tp  = getInputPort(toNode, portIndex);
+    const pts = deduplicateWirePath(
+      buildWirePoints(fp, portWireDir(fromNode.rotation), waypoints, tp, portWireDir(toNode.rotation), routeDir),
+    );
+    for (const [nid, node] of cs.nodes) {
+      if (nid === pending.fromNodeId || nid === nodeId) continue;
+      if (wirePathHitsNode(pts, node)) { setPending(null); return; }
+    }
+
+    // Reject if the target input port already has a wire connected to it.
+    for (const wire of cs.wires.values()) {
+      if (wire.to.nodeId === nodeId && wire.to.portIndex === portIndex) {
+        setPending(null);
+        return;
+      }
+    }
+
     managerRef.current.addWire(
       { nodeId: pending.fromNodeId, portIndex: pending.fromPortIndex },
       { nodeId, portIndex },
       waypoints,
+      routeDir,
     );
     setPending(null);
     mode === 'running' ? propagateAndRefresh() : setCs(managerRef.current.getState());
@@ -472,6 +492,7 @@ export function CircuitSimulator({ onBack }: CircuitSimulatorProps) {
             onPendingMove={handlePendingMove}
             onCancelPending={() => setPending(null)}
             onInputSetValue={handleInputSetValue}
+            onSplitSetOutputCount={handleSplitSetOutputCount}
           />
         </div>
 

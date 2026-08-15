@@ -322,21 +322,21 @@ describe('disconnected inputs', () => {
     expect(signals.get(wOut)).toBeUndefined();
   });
 
-  it('gate downstream of an unresolved gate also stays undefined', () => {
+  it('OR gate with one true input resolves even if the other input is unresolved', () => {
+    // AND(true, undefined) → undefined; OR(undefined, true) → true  (short-circuit)
     let wFinal!: string;
     const signals = run(mgr => {
-      // Incomplete AND gate (missing port 1) feeds into OR gate
       const inA   = mgr.addNode({ type: 'input', value: true, position: P });
       const andG  = mgr.addNode({ type: 'gate', gateType: 'AND', position: P });
       const inB   = mgr.addNode({ type: 'input', value: true, position: P });
       const orG   = mgr.addNode({ type: 'gate', gateType: 'OR',  position: P });
       const out   = mgr.addNode({ type: 'output', position: P });
-      mgr.addWire({ nodeId: inA,  portIndex: 0 }, { nodeId: andG, portIndex: 0 }); // port 1 missing
+      mgr.addWire({ nodeId: inA,  portIndex: 0 }, { nodeId: andG, portIndex: 0 }); // port 1 missing → AND stays undefined
       mgr.addWire({ nodeId: andG, portIndex: 0 }, { nodeId: orG,  portIndex: 0 });
-      mgr.addWire({ nodeId: inB,  portIndex: 0 }, { nodeId: orG,  portIndex: 1 });
+      mgr.addWire({ nodeId: inB,  portIndex: 0 }, { nodeId: orG,  portIndex: 1 }); // OR(undefined, true) = true
       wFinal = mgr.addWire({ nodeId: orG, portIndex: 0 }, { nodeId: out, portIndex: 0 });
     });
-    expect(signals.get(wFinal)).toBeUndefined();
+    expect(signals.get(wFinal)).toBe(true);
   });
 });
 

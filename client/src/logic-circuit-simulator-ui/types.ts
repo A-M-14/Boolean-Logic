@@ -1,6 +1,6 @@
 import type { NodeId } from '../logic-circuit-simulator-engine/index.js';
 
-export type SimulatorMode = 'idle' | 'running' | 'stopped';
+export type SimulatorMode = 'idle' | 'running';
 
 export interface ZoomState {
   x: number;

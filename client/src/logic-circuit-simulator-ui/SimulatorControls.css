@@ -30,12 +30,6 @@
   box-shadow:   0 0 8px #4ade8022;
 }
 
-.sim-controls__btn--stop:not(:disabled):hover {
-  border-color: #f87171;
-  color:        #f87171;
-  box-shadow:   0 0 8px #f8717122;
-}
-
 .sim-controls__btn--reset:not(:disabled):hover {
   border-color: #64ffda;
   color:        #64ffda;

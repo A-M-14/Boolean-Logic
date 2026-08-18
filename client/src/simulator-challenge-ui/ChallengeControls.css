@@ -1,0 +1,52 @@
+/* ── Challenge Controls ────────────────────────────────────────────────────────
+   Three buttons injected into the simulator topbar left section,
+   styled to match SimulatorControls buttons exactly.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.challenge-controls {
+  display:     flex;
+  align-items: center;
+  gap:         0.45rem;
+}
+
+.challenge-controls__btn {
+  background:    #1e1b3a;
+  border:        1px solid #2d2a50;
+  border-radius: 7px;
+  color:         #94a3b8;
+  cursor:        pointer;
+  font-family:   inherit;
+  font-size:     0.8rem;
+  font-weight:   600;
+  padding:       0.35rem 0.9rem;
+  transition:    border-color 0.14s, color 0.14s, background 0.14s, box-shadow 0.14s;
+  white-space:   nowrap;
+}
+
+/* Challenge Truth Table — cyan accent */
+.challenge-controls__btn--table:hover {
+  border-color: #64ffda;
+  color:        #64ffda;
+  box-shadow:   0 0 8px #64ffda22;
+}
+
+/* New Challenge — amber accent */
+.challenge-controls__btn--new:hover {
+  border-color: #fbbf24;
+  color:        #fbbf24;
+  box-shadow:   0 0 8px #fbbf2422;
+}
+
+/* Submit for Testing — green accent */
+.challenge-controls__btn--submit:hover {
+  border-color: #4ade80;
+  color:        #4ade80;
+  box-shadow:   0 0 8px #4ade8022;
+}
+
+/* Show Solution — purple accent */
+.challenge-controls__btn--solution:hover {
+  border-color: #a78bfa;
+  color:        #a78bfa;
+  box-shadow:   0 0 8px #a78bfa22;
+}

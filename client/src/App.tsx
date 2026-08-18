@@ -3,6 +3,7 @@ import type { Difficulty } from '@boolean-logic/shared';
 import type { GameType } from './formula-games-ui/types.js';
 import { FormulaGameSession } from './formula-games-ui/FormulaGameSession.js';
 import { CircuitSimulator } from './logic-circuit-simulator-ui/index.js';
+import { ChallengeSession } from './simulator-challenge-ui/index.js';
 import { BoardGameSession } from './board-game-ui/index.js';
 import type { BoardMode } from './board-game-ui/index.js';
 import './App.css';
@@ -10,7 +11,10 @@ type FormulaPlayMode = 'solo'   | 'one-on-one';
 
 type Screen =
   | { id: 'main' }
+  | { id: 'simulator-mode' }
   | { id: 'simulator' }
+  | { id: 'simulator-challenge' }
+  | { id: 'simulator-challenge-game'; difficulty: Difficulty }
   | { id: 'board-mode' }
   | { id: 'board-level'; boardMode: BoardMode }
   | { id: 'board-game';  boardMode: BoardMode; difficulty?: Difficulty }
@@ -190,7 +194,7 @@ function MainMenu({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
 
         <button
           className="feature-card feature-card--cyan"
-          onClick={() => onNavigate({ id: 'simulator' })}
+          onClick={() => onNavigate({ id: 'simulator-mode' })}
         >
           <span className="feature-card__icon"><SimulatorIcon /></span>
           <span className="feature-card__title">Simulator</span>
@@ -300,6 +304,27 @@ const DIFFICULTY_OPTIONS: MenuOption[] = [
   { icon: '💀', label: 'Hard',   desc: 'Complex, deeply nested formulas',   value: 'hard'   },
 ];
 
+const SIMULATOR_MODE_OPTIONS: MenuOption[] = [
+  {
+    icon:  '🔬',
+    label: 'Free Simulator',
+    desc:  'Build and explore Boolean circuits with no constraints',
+    value: 'free',
+  },
+  {
+    icon:  '🎯',
+    label: 'Simulator Challenge',
+    desc:  'Build a circuit that implements a given truth table',
+    value: 'challenge',
+  },
+];
+
+const CHALLENGE_DIFFICULTY_OPTIONS: MenuOption[] = [
+  { icon: '🌱', label: 'Easy',   desc: '3 input variables — 8 output rows',  value: 'easy'   },
+  { icon: '🔥', label: 'Medium', desc: '4 input variables — 16 output rows',  value: 'medium' },
+  { icon: '💀', label: 'Hard',   desc: '5 input variables — 32 output rows',  value: 'hard'   },
+];
+
 const BOARD_MODE_OPTIONS: MenuOption[] = [
   { icon: '👤', label: 'Single Player',    desc: 'Play a solo puzzle session',     value: 'single'      },
   { icon: '👥', label: 'One-on-One',       desc: 'Two players on the same device', value: 'one-on-one'  },
@@ -352,8 +377,49 @@ export function App() {
         </div>
       );
 
+    case 'simulator-mode':
+      return (
+        <div className="app">
+          <SubMenu
+            title="Simulator"
+            subtitle="Choose a mode"
+            options={SIMULATOR_MODE_OPTIONS}
+            onSelect={value => {
+              if (value === 'free') navigate({ id: 'simulator' });
+              else navigate({ id: 'simulator-challenge' });
+            }}
+            onBack={goMain}
+          />
+        </div>
+      );
+
     case 'simulator':
-      return <CircuitSimulator onBack={goMain} />;
+      return <CircuitSimulator onBack={() => navigate({ id: 'simulator-mode' })} />;
+
+    case 'simulator-challenge':
+      return (
+        <div className="app">
+          <SubMenu
+            title="Simulator Challenge"
+            subtitle="Choose a difficulty level"
+            options={CHALLENGE_DIFFICULTY_OPTIONS}
+            onSelect={value =>
+              navigate({ id: 'simulator-challenge-game', difficulty: value as Difficulty })
+            }
+            onBack={() => navigate({ id: 'simulator-mode' })}
+          />
+        </div>
+      );
+
+    case 'simulator-challenge-game': {
+      const { difficulty } = screen;
+      return (
+        <ChallengeSession
+          difficulty={difficulty}
+          onBack={() => navigate({ id: 'simulator-challenge' })}
+        />
+      );
+    }
 
     case 'board-mode':
       return (

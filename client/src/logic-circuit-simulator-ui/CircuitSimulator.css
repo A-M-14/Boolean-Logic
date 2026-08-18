@@ -28,6 +28,13 @@
   flex: 1;
 }
 
+.cs-topbar__right {
+  align-items:     center;
+  display:         flex;
+  justify-content: flex-end;
+  gap:             0.5rem;
+}
+
 .cs-topbar__center {
   display:         flex;
   justify-content: center;

@@ -6,12 +6,11 @@ interface SimulatorControlsProps {
   mode:     SimulatorMode;
   hasNodes: boolean;
   onRun:    () => void;
-  onStop:   () => void;
   onReset:  () => void;
   onClear:  () => void;
 }
 
-export function SimulatorControls({ mode, hasNodes, onRun, onStop, onReset, onClear }: SimulatorControlsProps) {
+export function SimulatorControls({ mode, hasNodes, onRun, onReset, onClear }: SimulatorControlsProps) {
   return (
     <div className="sim-controls">
       <button
@@ -21,15 +20,6 @@ export function SimulatorControls({ mode, hasNodes, onRun, onStop, onReset, onCl
         title="Propagate signals through the circuit"
       >
         ▶ Run
-      </button>
-
-      <button
-        className="sim-controls__btn sim-controls__btn--stop"
-        onClick={onStop}
-        disabled={mode !== 'running'}
-        title="Pause signal propagation"
-      >
-        ■ Stop
       </button>
 
       <button

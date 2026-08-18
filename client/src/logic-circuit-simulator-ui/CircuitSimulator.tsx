@@ -38,6 +38,13 @@ import './CircuitSimulator.css';
 /** Per-wire animation info stored in the propagatingWires map. */
 type PropWireInfo = { signal: boolean | undefined; durationMs: number; rev: number };
 
+/** One sequential wave in the propagation animation. */
+type WaveEvent = {
+  durationMs:  number;
+  propagating: Map<WireId, PropWireInfo>;
+  reveal:      Map<WireId, boolean | undefined>;
+};
+
 /** Speed constant and clamp bounds for wire animation duration. */
 const WIRE_SPEED   = 0.25 / 3;   // SVG user units (px) per millisecond
 const WIRE_MIN_MS  = 600;
@@ -125,11 +132,16 @@ function DragPreview({ data }: { data: PaletteItemData | null }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export interface CircuitSimulatorProps {
-  onBack: () => void;
-  challengeMode?: boolean;
+  onBack:             () => void;
+  challengeMode?:     boolean;
+  /** Extra React nodes rendered in the topbar right section. */
+  extraRightControls?: React.ReactNode;
+  /** Mutable ref kept current with the latest CircuitState on every render.
+   *  Read on-demand (e.g. on Submit) — causes no extra re-renders in the parent. */
+  csRef?:             React.MutableRefObject<CircuitState | undefined>;
 }
 
-export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProps) {
+export function CircuitSimulator({ onBack, challengeMode, extraRightControls, csRef }: CircuitSimulatorProps) {
   const managerRef = useRef(new CircuitStateManager());
   const [cs, setCs]         = useState<CircuitState>(() => managerRef.current.getState());
   const [mode, setMode]     = useState<SimulatorMode>('idle');
@@ -147,7 +159,7 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
   /** Pending setTimeout handles so we can cancel mid-animation. */
   const animTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  /** Cancel any in-progress propagation animation and reset animation state. */
+  /** Cancel any in-progress animation and reset animation state. */
   function cancelAnimation() {
     if (animTimersRef.current.length === 0) return;
     for (const t of animTimersRef.current) clearTimeout(t);
@@ -217,21 +229,14 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
     }
 
     // ── 4. Build wave events with sequential timing ───────────────────────────
-    // Each wave animates all its wires simultaneously; next wave starts only
+    // Each wave animates all its wires simultaneously; the next wave starts only
     // after the longest wire in the current wave finishes.
     //
     // wireRevMap ensures that if the same wire appears in multiple waves
     // (feedback confirmation), its animRev increments — retriggers Wire's
     // useEffect even though isPropagating stays true.
-    type WaveEvent = {
-      endMs:       number;
-      propagating: Map<WireId, PropWireInfo>;
-      reveal:      Map<WireId, boolean | undefined>;
-    };
-
     const wireRevMap = new Map<WireId, number>();
     const waveEvents: WaveEvent[] = [];
-    let cursor = 0;
 
     for (const waveEntries of waves) {
       let maxDur = 0;
@@ -247,11 +252,8 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
         maxDur = Math.max(maxDur, durationMs);
       }
 
-      cursor += maxDur;
-      waveEvents.push({ endMs: cursor, propagating, reveal });
+      waveEvents.push({ durationMs: maxDur, propagating, reveal });
     }
-
-    const totalMs = cursor;
 
     // ── 5. Kick off animation ─────────────────────────────────────────────────
     setAnimCs({ nodes: finalState.nodes, wires: initWires });
@@ -259,9 +261,11 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
 
     // Schedule one timeout per wave-end: reveal that wave's signals, then
     // immediately start the next wave (or clear propagation if last wave).
+    let cursor = 0;
     for (let wi = 0; wi < waveEvents.length; wi++) {
       const wave     = waveEvents[wi];
       const nextWave = waveEvents[wi + 1] ?? null;
+      cursor += wave.durationMs;
 
       const t = setTimeout(() => {
         // Reveal this wave's wires with their wave signal.
@@ -276,7 +280,7 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
         });
         // Start next wave's halos (or clear if this was the last wave).
         setPropagatingWires(nextWave ? nextWave.propagating : new Map<WireId, PropWireInfo>());
-      }, wave.endMs);
+      }, cursor);
 
       animTimersRef.current.push(t);
     }
@@ -285,13 +289,8 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
     const tDone = setTimeout(() => {
       setAnimCs(null);
       animTimersRef.current = [];
-    }, totalMs + 50);
+    }, cursor + 50);
     animTimersRef.current.push(tDone);
-  }
-
-  function handleStop() {
-    cancelAnimation();
-    setMode('stopped');
   }
 
   function handleReset() {
@@ -309,8 +308,9 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
   }
 
   function handleInputSetValue(nodeId: NodeId, value: boolean) {
+    if (mode === 'running') return;
     managerRef.current.setInputValue(nodeId, value);
-    mode === 'running' ? propagateAndRefresh() : setCs(managerRef.current.getState());
+    setCs(managerRef.current.getState());
   }
 
   function handleSplitSetOutputCount(nodeId: NodeId, count: number) {
@@ -425,6 +425,14 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
       if (wirePathHitsNode(pts, node)) { setPending(null); return; }
     }
 
+    // Reject if the source output port already has a wire coming from it.
+    for (const wire of cs.wires.values()) {
+      if (wire.from.nodeId === pending.fromNodeId && wire.from.portIndex === pending.fromPortIndex) {
+        setPending(null);
+        return;
+      }
+    }
+
     // Reject if the target input port already has a wire connected to it.
     for (const wire of cs.wires.values()) {
       if (wire.to.nodeId === nodeId && wire.to.portIndex === portIndex) {
@@ -452,6 +460,10 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
     setPending(p => p ? { ...p, mx: pos.x, my: pos.y } : null);
   }
 
+  // Expose the live circuit state via the caller-supplied ref.
+  // Setting a mutable ref during render is safe — it's synchronous and side-effect-free.
+  if (csRef !== undefined) csRef.current = cs;
+
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="circuit-simulator">
@@ -466,12 +478,13 @@ export function CircuitSimulator({ onBack, challengeMode }: CircuitSimulatorProp
               mode={mode}
               hasNodes={cs.nodes.size > 0}
               onRun={handleRun}
-              onStop={handleStop}
               onReset={handleReset}
               onClear={handleClear}
             />
           </div>
-          <div className="cs-topbar__right" />
+          <div className="cs-topbar__right">
+            {extraRightControls}
+          </div>
         </div>
 
         {/* Body — canvas fills all remaining space */}

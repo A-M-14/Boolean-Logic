@@ -1,0 +1,84 @@
+/* ── Overlay ──────────────────────────────────────────────────────────────────── */
+
+.sol-display__overlay {
+  position:        fixed;
+  inset:           0;
+  background:      rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  z-index:         200;
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────────────── */
+
+.sol-display {
+  background:      #0d0b1e;
+  border:          1px solid #2d2a50;
+  border-radius:   14px;
+  box-shadow:      0 8px 40px rgba(0, 0, 0, 0.75);
+  display:         flex;
+  flex-direction:  column;
+  height:          78vh;
+  overflow:        hidden;
+  width:           82vw;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────────── */
+
+.sol-display__header {
+  align-items:   center;
+  border-bottom: 1px solid #1e1b3a;
+  display:       flex;
+  flex-shrink:   0;
+  gap:           1rem;
+  padding:       0.85rem 1.1rem;
+}
+
+.sol-display__header-text {
+  display:        flex;
+  flex:           1;
+  flex-direction: column;
+  gap:            0.15rem;
+}
+
+.sol-display__title {
+  color:       #e2e8f0;
+  font-size:   1rem;
+  font-weight: 700;
+  margin:      0;
+}
+
+.sol-display__meta {
+  color:     #64ffda;
+  font-size: 0.78rem;
+}
+
+.sol-display__close {
+  background:    none;
+  border:        none;
+  border-radius: 4px;
+  color:         #64748b;
+  cursor:        pointer;
+  font-size:     1rem;
+  padding:       0.2rem 0.3rem;
+  transition:    color 0.14s;
+}
+
+.sol-display__close:hover { color: #e2e8f0; }
+
+/* ── Canvas area ──────────────────────────────────────────────────────────────── */
+
+.sol-display__canvas-wrap {
+  flex:     1;
+  overflow: hidden;
+  display:  flex;
+}
+
+/* The inner CircuitCanvas renders an SVG that fills its container. */
+.sol-display__canvas-wrap > * {
+  flex:   1;
+  height: 100%;
+  width:  100%;
+}

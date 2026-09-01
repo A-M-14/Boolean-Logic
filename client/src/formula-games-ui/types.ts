@@ -21,6 +21,8 @@ export interface FormulaGameSessionProps {
   /** Called when the player clicks "Back to Menu" — navigates to the last
    *  menu screen before the game (e.g. difficulty selection). */
   onBackToMenu?:  () => void;
+  /** Called when the player clicks "Home" — navigates directly to the main menu. */
+  onHome?:        () => void;
   playerName:     string;
   // Online-only
   socket?:        WebSocket;

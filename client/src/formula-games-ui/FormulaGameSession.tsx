@@ -13,7 +13,7 @@ import {
 } from '@boolean-logic/shared';
 import type { EvaluationRound, EquivalenceRound } from '@boolean-logic/shared';
 
-import { FormulaDisplay }              from './FormulaDisplay.js';
+import { FormulaDisplay, nodeToString } from './FormulaDisplay.js';
 import { VariableAssignmentDisplay }   from './VariableAssignmentDisplay.js';
 import { TimerDisplay }                from './TimerDisplay.js';
 import { ScoreDisplay }                from './ScoreDisplay.js';
@@ -39,6 +39,14 @@ import type {
 
 import './FormulaGameSession.css';
 
+const HouseIcon = () => (
+  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="1,8 8,2 15,8" />
+    <polyline points="4,8 4,14 12,14 12,8" />
+    <polyline points="6.5,14 6.5,10.5 9.5,10.5 9.5,14" />
+  </svg>
+);
+
 export function FormulaGameSession({
   gameType,
   mode,
@@ -46,6 +54,7 @@ export function FormulaGameSession({
   onSessionEnd,
   onPlayAgain,
   onBackToMenu,
+  onHome,
   socket,
   playerName = 'You',
   opponentName = 'Opponent',
@@ -315,6 +324,7 @@ export function FormulaGameSession({
           roundNumber={reviewRoundIndex + 1}
           onBack={() => setReviewRoundIndex(null)}
           onBackToMenu={onBackToMenu}
+          onHome={onHome}
         />
       );
     }
@@ -329,6 +339,7 @@ export function FormulaGameSession({
           onMenu={() => onSessionEnd(totalScore)}
           onReviewRound={setReviewRoundIndex}
           onBackToMenu={onBackToMenu}
+          onHome={onHome}
         />
       );
     }
@@ -343,6 +354,7 @@ export function FormulaGameSession({
         onMenu={() => onSessionEnd(totalScore)}
         onReviewRound={setReviewRoundIndex}
         onBackToMenu={onBackToMenu}
+        onHome={onHome}
       />
     );
   }
@@ -358,6 +370,9 @@ export function FormulaGameSession({
         <div className="notation-bar-side notation-bar-left">
           {onBackToMenu !== undefined && (
             <button className="game-back-btn" onClick={onBackToMenu}>← Back to Menu</button>
+          )}
+          {onHome !== undefined && (
+            <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>
           )}
         </div>
         <div className="notation-bar-center">
@@ -448,8 +463,17 @@ export function FormulaGameSession({
         />
       )}
 
-      {/* Draft pane — cleared each round via key */}
-      <DraftPane key={roundIndex} />
+      {/* Draft pane — pre-filled with the round's formula; remounted each round via key */}
+      {currentRound !== null && (
+        <DraftPane
+          key={roundIndex}
+          initialText={
+            gameType === 'evaluation'
+              ? `${nodeToString((currentRound as EvaluationRound).formula.root, notation)} = `
+              : `A: ${nodeToString((currentRound as EquivalenceRound).formulaA.root, notation)} = \nB: ${nodeToString((currentRound as EquivalenceRound).formulaB.root, notation)} = `
+          }
+        />
+      )}
 
     </div>
   );

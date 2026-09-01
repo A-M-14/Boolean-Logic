@@ -20,6 +20,14 @@ import type {
 } from './types.js';
 import './BoardGameSession.css';
 
+const HouseIcon = () => (
+  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="1,8 8,2 15,8" />
+    <polyline points="4,8 4,14 12,14 12,8" />
+    <polyline points="6.5,14 6.5,10.5 9.5,10.5 9.5,14" />
+  </svg>
+);
+
 type Phase = 'playing' | 'result';
 
 interface SoloState {
@@ -33,6 +41,7 @@ export function BoardGameSession({
   playerName   = 'You',
   opponentName = 'Opponent',
   onBack,
+  onHome,
 }: BoardGameSessionProps) {
 
   const isOnline = boardMode === 'online';
@@ -52,10 +61,12 @@ export function BoardGameSession({
   const [waitingForServer, setWaitingForServer] = useState(false);
   const [phase,            setPhase]            = useState<Phase>('playing');
   const [rulesOpen,        setRulesOpen]        = useState(false);
-  const [soloState,        setSoloState]        = useState<SoloState | null>(null);
-  const [computerThinking, setComputerThinking] = useState(false);
-  const [solutionRevealed, setSolutionRevealed] = useState(false);
-  const [victoryDismissed, setVictoryDismissed] = useState(false);
+  const [soloState,           setSoloState]           = useState<SoloState | null>(null);
+  const [computerThinking,    setComputerThinking]    = useState(false);
+  const [solutionRevealed,    setSolutionRevealed]    = useState(false);
+  const [victoryDismissed,    setVictoryDismissed]    = useState(false);
+  const [playerScoreAtReveal, setPlayerScoreAtReveal] = useState<number | null>(null);
+  const [resultDismissed,     setResultDismissed]     = useState(false);
 
   const boardStateRef = useRef<BoardState | null>(boardState);
   boardStateRef.current = boardState;
@@ -177,10 +188,12 @@ export function BoardGameSession({
     const newScores = computeFullScore(newCells);
     setBoardState({ ...boardState, cells: newCells, scores: newScores, isComplete: false });
     setSoloState(null);
+    setPlayerScoreAtReveal(null);
   }, [boardState, phase]);
 
   function handleShowSolution() {
     if (boardState === null) return;
+    setPlayerScoreAtReveal(boardState.scores.red);
     const { optimalScore, solution } = computeOptimalSolution(boardState.cells);
     const newCells = boardState.cells.map((row, r) =>
       row.map((cell, c) => {
@@ -202,10 +215,12 @@ export function BoardGameSession({
     setComputerThinking(false);
     setSolutionRevealed(false);
     setVictoryDismissed(false);
+    setPlayerScoreAtReveal(null);
+    setResultDismissed(false);
   }
 
   // ─── Render: result screen ────────────────────────────────────────────────
-  if (phase === 'result' && boardMode !== 'single' && boardState !== null) {
+  if (phase === 'result' && boardMode === 'two-player' && boardState !== null) {
     return (
       <div className="board-game-session">
         <GameResultDisplay
@@ -225,7 +240,10 @@ export function BoardGameSession({
   if (isOnline && boardState === null) {
     return (
       <div className="board-game-session board-game-session--waiting">
-        <button className="board-game-session__back" onClick={onBack}>← Back To Menu</button>
+        <div className="board-game-session__nav">
+          <button className="board-game-session__back" onClick={onBack}>← Back To Menu</button>
+          {onHome !== undefined && <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>}
+        </div>
         <p className="board-game-session__waiting-msg">Waiting for game to start…</p>
       </div>
     );
@@ -233,9 +251,17 @@ export function BoardGameSession({
 
   // ─── Render: playing ──────────────────────────────────────────────────────
   return (
-    <div className="board-game-session">
-      <button className="board-game-session__back" onClick={onBack}>← Back To Menu</button>
+    <div className={`board-game-session${boardMode === 'single' ? ' board-game-session--solo' : ''}`}>
+      <div className="board-game-session__nav">
+        <button className="board-game-session__back" onClick={onBack}>← Back To Menu</button>
+        {onHome !== undefined && <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>}
+      </div>
       <div className="board-game-session__top-right">
+        {boardMode === 'single' && (
+          <button className="board-game-session__new-round" onClick={handlePlayAgain}>
+            New Round
+          </button>
+        )}
         {boardMode === 'single' && !solutionRevealed && !isVictory && (
           <button className="board-game-session__show-solution" onClick={handleShowSolution}>
             Reveal Solution
@@ -276,9 +302,54 @@ export function BoardGameSession({
             scores={boardState.scores}
             gameMode={gameMode}
             optimalScore={soloState?.optimalScore}
+            playerScore={playerScoreAtReveal ?? undefined}
             redLabel={redLabel}
             blueLabel={blueLabel}
           />
+        );
+      })()}
+
+      {phase === 'result' && (boardMode === 'vs-computer' || boardMode === 'online') && boardState !== null && !resultDismissed && (() => {
+        const { scores } = boardState;
+        const winningColor = scores.red > scores.blue ? 'red' : scores.blue > scores.red ? 'blue' : null;
+        const isDraw       = winningColor === null;
+        const localWins    = !isDraw && winningColor === localPlayer;
+        const opponentDisplayName = boardMode === 'vs-computer' ? 'Computer' : opponentName;
+        const winnerText   = isDraw
+          ? 'It\u2019s a draw!'
+          : `The winner is: ${localWins ? playerName : opponentDisplayName}`;
+        const winnerMod    = isDraw ? 'result-draw' : `result-${winningColor}`;
+        const blueLabel    = localPlayer === 'blue' ? playerName : opponentDisplayName;
+        const redLabel     = localPlayer === 'red'  ? playerName : opponentDisplayName;
+        return (
+          <div className="board-game-session__result-overlay">
+            <div className={`board-game-session__result-modal board-game-session__result-modal--${winnerMod}`}>
+              <button
+                className="board-game-session__result-close"
+                onClick={() => setResultDismissed(true)}
+                aria-label="Close"
+              >✕</button>
+              <p className="board-game-session__result-title">{winnerText}</p>
+              <div className="board-game-session__result-scores">
+                <span className="board-game-session__result-score board-game-session__result-score--blue">{blueLabel}: {scores.blue}</span>
+                <span className="board-game-session__result-score-sep">–</span>
+                <span className="board-game-session__result-score board-game-session__result-score--red">{redLabel}: {scores.red}</span>
+              </div>
+              <div className="board-game-session__result-actions">
+                {!isOnline && (
+                  <button className="board-game-session__result-btn board-game-session__result-btn--primary" onClick={handlePlayAgain}>
+                    Play Again
+                  </button>
+                )}
+                <div className="board-game-session__result-back-row">
+                  <button className="board-game-session__result-btn board-game-session__result-btn--secondary" onClick={onBack}>
+                    ← Back to Menu
+                  </button>
+                  {onHome !== undefined && <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>}
+                </div>
+              </div>
+            </div>
+          </div>
         );
       })()}
 

@@ -16,7 +16,7 @@ body {
   display: flex;
 }
 
-.notation-bar-left  { justify-content: flex-start; }
+.notation-bar-left  { justify-content: flex-start; gap: 0.5rem; }
 .notation-bar-right { justify-content: flex-end; }
 
 .notation-bar-center {
@@ -42,6 +42,30 @@ body {
 }
 
 .game-back-btn:hover {
+  border-color: #64748b;
+  color:        #e2e8f0;
+}
+
+/* ─── Shared game button — Home ──────────────────────────────────────────────── */
+
+.home-btn {
+  background:    #1e1b3a;
+  border:        1px solid #2d2a50;
+  border-radius: 6px;
+  color:         #94a3b8;
+  cursor:        pointer;
+  font-size:     0.88rem;
+  font-weight:   500;
+  font-family:   inherit;
+  padding:       0.5rem 1rem;
+  white-space:   nowrap;
+  transition:    border-color 0.15s, color 0.15s;
+  display:       inline-flex;
+  align-items:   center;
+  gap:           0.35rem;
+}
+
+.home-btn:hover {
   border-color: #64748b;
   color:        #e2e8f0;
 }

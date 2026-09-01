@@ -9,20 +9,20 @@ import type { Difficulty, SearchConfig } from './types';
 /**
  * Search configurations for each difficulty level.
  *
- * Easy   — Shallow depth (1 ply), no Alpha–Beta pruning, score-differential-only heuristic.
+ * Easy   — Shallow depth (1 ply), Alpha–Beta pruning enabled, score-differential-only heuristic.
  *           Produces proportionally weaker play: the computer looks only one move ahead
  *           and ignores positional potential.
  *
  * Medium — Moderate depth (3 plies), Alpha–Beta pruning enabled, modest potential-score weight.
  *           Balanced between speed and strategic awareness.
  *
- * Hard   — Deeper search (6 plies), Alpha–Beta pruning with move ordering, full potential-score
+ * Hard   — Deeper search (5 plies), Alpha–Beta pruning with move ordering, full potential-score
  *           weight.  Produces the strongest computer play.
  */
 const SEARCH_CONFIGS: Record<Difficulty, SearchConfig> = {
   easy: {
     depth: 1,
-    useAlphaBeta: false,
+    useAlphaBeta: true,
     heuristicWeights: {
       scoreDifferential: 1,
       potentialScore: 0,
@@ -37,7 +37,7 @@ const SEARCH_CONFIGS: Record<Difficulty, SearchConfig> = {
     },
   },
   hard: {
-    depth: 6,
+    depth: 5,
     useAlphaBeta: true,
     heuristicWeights: {
       scoreDifferential: 1,

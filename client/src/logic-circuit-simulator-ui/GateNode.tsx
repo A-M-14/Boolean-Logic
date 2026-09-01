@@ -1,6 +1,6 @@
 import React from 'react';
 import type { GateNode as GateNodeType } from '../logic-circuit-simulator-engine/index.js';
-import { GATE_W, GATE_H, PORT_R, HIT_R, IN_HIT_R, getInputPort, getOutputPort, rotateAround } from './utils.js';
+import { GATE_W, GATE_H, PORT_R, HIT_R, IN_HIT_R, getInputPort, getOutputPort } from './utils.js';
 
 // ── IEEE/ANSI gate body shapes ─────────────────────────────────────────────────
 // All paths defined in local space: origin at gate center,
@@ -101,21 +101,33 @@ export function GateBody({ gateType }: { gateType: string }) {
 // ── Gate node component ────────────────────────────────────────────────────────
 
 interface GateNodeProps {
-  node:       GateNodeType;
-  hasPending: boolean;
-  onDown:     (e: React.MouseEvent) => void;
-  onDblClick: (e: React.MouseEvent) => void;
-  onClick:    (e: React.MouseEvent) => void;
-  onOutPort:  (e: React.MouseEvent, portIndex: number) => void;
-  onInPort:   (e: React.MouseEvent, portIndex: number) => void;
+  node:            GateNodeType;
+  hasPending:      boolean;
+  outPortOccupied: boolean;
+  onDown:          (e: React.MouseEvent) => void;
+  onDblClick:      (e: React.MouseEvent) => void;
+  onClick:         (e: React.MouseEvent) => void;
+  onOutPort:       (e: React.MouseEvent, portIndex: number) => void;
+  onInPort:        (e: React.MouseEvent, portIndex: number) => void;
 }
 
 export function GateNode({
-  node, hasPending,
+  node, hasPending, outPortOccupied,
   onDown, onDblClick, onClick, onOutPort, onInPort,
 }: GateNodeProps) {
   const { x, y } = node.position;
   const iCount = node.gateType === 'NOT' ? 1 : 2;
+
+  // Half-height of the gate's screen bounding box.  At 90°/270° the gate body
+  // is rotated so its taller dimension (GATE_W) runs vertically in screen space.
+  const screenHH = (node.rotation === 90 || node.rotation === 270)
+    ? GATE_W / 2
+    : GATE_H / 2;
+
+  // Label sits directly below the gate body in screen space regardless of
+  // rotation.  Keeping the label at a fixed screen position (not orbiting)
+  // prevents labels from moving above adjacent gates and overlapping their labels.
+  const labelY = y + screenHH + 13;
 
   return (
     <g>
@@ -130,20 +142,15 @@ export function GateNode({
         <GateBody gateType={node.gateType} />
       </g>
 
-      {/* Label — always horizontal; orbits the gate as it rotates */}
-      {(() => {
-        const lp = rotateAround({ x, y: y + GATE_H / 2 + 13 }, { x, y }, node.rotation);
-        return (
-          <text
-            x={lp.x} y={lp.y}
-            textAnchor="middle" dominantBaseline="central"
-            fill="#6d5fd4" fontSize={10} fontWeight={600}
-            style={{ fontFamily: 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
-          >
-            {node.gateType}
-          </text>
-        );
-      })()}
+      {/* Label — always below the gate body in screen space, always horizontal */}
+      <text
+        x={x} y={labelY}
+        textAnchor="middle" dominantBaseline="central"
+        fill="#6d5fd4" fontSize={10} fontWeight={600}
+        style={{ fontFamily: 'system-ui, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
+      >
+        {node.gateType}
+      </text>
 
       {/* Input ports */}
       {Array.from({ length: iCount }, (_, i) => {
@@ -166,10 +173,10 @@ export function GateNode({
         return (
           <g>
             <circle cx={pp.x} cy={pp.y} r={PORT_R}
-              fill="#111827" stroke="#a78bfa88" strokeWidth={1.5}
+              fill="#111827" stroke={outPortOccupied ? '#374151' : '#a78bfa88'} strokeWidth={1.5}
               style={{ pointerEvents: 'none' }} />
             <circle cx={pp.x} cy={pp.y} r={HIT_R} fill="transparent"
-              style={{ cursor: 'crosshair' }}
+              style={{ cursor: hasPending || outPortOccupied ? 'default' : 'pointer' }}
               onClick={e => onOutPort(e, 0)} />
           </g>
         );

@@ -6,16 +6,17 @@ import { CIRC_R, PORT_R, HIT_R, getOutputPort } from './utils.js';
 const BOX = CIRC_R * 2;   // 48 × 48
 
 interface CircuitInputProps {
-  node:       InputNode;
-  hasPending: boolean;
-  onDown:     (e: React.MouseEvent) => void;
-  onDblClick: (e: React.MouseEvent) => void;
-  onClick:    (e: React.MouseEvent) => void;
-  onOutPort:  (e: React.MouseEvent) => void;
+  node:            InputNode;
+  hasPending:      boolean;
+  outPortOccupied: boolean;
+  onDown:          (e: React.MouseEvent) => void;
+  onDblClick:      (e: React.MouseEvent) => void;
+  onClick:         (e: React.MouseEvent) => void;
+  onOutPort:       (e: React.MouseEvent) => void;
 }
 
 export function CircuitInput({
-  node, hasPending,
+  node, hasPending, outPortOccupied,
   onDown, onDblClick, onClick, onOutPort,
 }: CircuitInputProps) {
   const col = node.value === true ? '#facc15' : node.value === false ? '#ef4444' : '#475569';
@@ -64,10 +65,10 @@ export function CircuitInput({
 
       {/* Output port */}
       <circle cx={pp.x} cy={pp.y} r={PORT_R}
-        fill="#111827" stroke="#a78bfa88" strokeWidth={1.5}
+        fill="#111827" stroke={outPortOccupied ? '#374151' : '#a78bfa88'} strokeWidth={1.5}
         style={{ pointerEvents: 'none' }} />
       <circle cx={pp.x} cy={pp.y} r={HIT_R} fill="transparent"
-        style={{ cursor: 'crosshair' }}
+        style={{ cursor: hasPending || outPortOccupied ? 'default' : 'pointer' }}
         onClick={onOutPort} />
     </g>
   );

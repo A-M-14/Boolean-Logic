@@ -2,14 +2,12 @@ import React from 'react';
 import './ChallengeControls.css';
 
 interface ChallengeControlsProps {
-  onViewChallenge: () => void;
   onNewChallenge:  () => void;
   onSubmit:        () => void;
   onViewSolution:  () => void;
 }
 
 export function ChallengeControls({
-  onViewChallenge,
   onNewChallenge,
   onSubmit,
   onViewSolution,
@@ -22,13 +20,6 @@ export function ChallengeControls({
         title="Generate a new challenge"
       >
         New Challenge
-      </button>
-      <button
-        className="challenge-controls__btn challenge-controls__btn--table"
-        onClick={onViewChallenge}
-        title="View the challenge truth table"
-      >
-        Challenge Truth Table
       </button>
       <button
         className="challenge-controls__btn challenge-controls__btn--submit"

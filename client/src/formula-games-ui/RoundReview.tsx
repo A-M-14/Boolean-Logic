@@ -11,16 +11,25 @@ import { TruthTableDisplay }           from './TruthTableDisplay.js';
 import type { RoundRecord, FormulaNotation } from './types.js';
 import './RoundReview.css';
 
+const HouseIcon = () => (
+  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="1,8 8,2 15,8" />
+    <polyline points="4,8 4,14 12,14 12,8" />
+    <polyline points="6.5,14 6.5,10.5 9.5,10.5 9.5,14" />
+  </svg>
+);
+
 interface RoundReviewProps {
   record:        RoundRecord;
   roundNumber:   number;
   onBack:        () => void;
   onBackToMenu?: () => void;
+  onHome?:       () => void;
 }
 
-type ActivePanel = 'solution' | 'truthTable' | 'truthTableA' | 'truthTableB' | null;
+type ActivePanel = 'solution' | 'truthTable' | 'truthTables' | null;
 
-export function RoundReview({ record, roundNumber, onBack, onBackToMenu }: RoundReviewProps) {
+export function RoundReview({ record, roundNumber, onBack, onBackToMenu, onHome }: RoundReviewProps) {
   const [notation,     setNotation]    = useState<FormulaNotation>('mathematical');
   const [activePanel,  setActivePanel] = useState<ActivePanel>(null);
 
@@ -38,6 +47,9 @@ export function RoundReview({ record, roundNumber, onBack, onBackToMenu }: Round
         <div className="notation-bar-side notation-bar-left">
           {onBackToMenu !== undefined && (
             <button className="game-back-btn" onClick={onBackToMenu}>← Back to Menu</button>
+          )}
+          {onHome !== undefined && (
+            <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>
           )}
         </div>
         <div className="notation-bar-center">
@@ -117,20 +129,12 @@ export function RoundReview({ record, roundNumber, onBack, onBackToMenu }: Round
           )}
 
           {!isEvaluation && (
-            <>
-              <button
-                className={`round-review-truth-table-button ${activePanel === 'truthTableA' ? 'active' : ''}`}
-                onClick={() => togglePanel('truthTableA')}
-              >
-                {activePanel === 'truthTableA' ? 'Hide Formula A Truth Table' : 'Show Formula A Truth Table'}
-              </button>
-              <button
-                className={`round-review-truth-table-button ${activePanel === 'truthTableB' ? 'active' : ''}`}
-                onClick={() => togglePanel('truthTableB')}
-              >
-                {activePanel === 'truthTableB' ? 'Hide Formula B Truth Table' : 'Show Formula B Truth Table'}
-              </button>
-            </>
+            <button
+              className={`round-review-truth-table-button ${activePanel === 'truthTables' ? 'active' : ''}`}
+              onClick={() => togglePanel('truthTables')}
+            >
+              {activePanel === 'truthTables' ? "Hide Formulas' Truth Tables" : "Show Formulas' Truth Tables"}
+            </button>
           )}
         </div>
 
@@ -153,19 +157,23 @@ export function RoundReview({ record, roundNumber, onBack, onBackToMenu }: Round
           />
         )}
 
-        {!isEvaluation && activePanel === 'truthTableA' && (
-          <TruthTableDisplay
-            formula={(record.round as EquivalenceRound).formulaA}
-            label="A"
-          />
-        )}
-
-        {!isEvaluation && activePanel === 'truthTableB' && (
-          <TruthTableDisplay
-            formula={(record.round as EquivalenceRound).formulaB}
-            label="B"
-          />
-        )}
+        {!isEvaluation && activePanel === 'truthTables' && (() => {
+          const round = record.round as EquivalenceRound;
+          if (round.areEquivalent) {
+            return (
+              <TruthTableDisplay
+                formula={round.formulaA}
+                heading="Formulas A and B"
+              />
+            );
+          }
+          return (
+            <div className="round-review-truth-tables-row">
+              <TruthTableDisplay formula={round.formulaA} label="A" />
+              <TruthTableDisplay formula={round.formulaB} label="B" />
+            </div>
+          );
+        })()}
 
       </div>
 

@@ -282,7 +282,15 @@ function SubMenu({
 
 // ─── Coming Soon placeholder ──────────────────────────────────────────────────
 
-function ComingSoon({ label, onBack }: { label: string; onBack: () => void }) {
+const HouseIcon = () => (
+  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="1,8 8,2 15,8" />
+    <polyline points="4,8 4,14 12,14 12,8" />
+    <polyline points="6.5,14 6.5,10.5 9.5,10.5 9.5,14" />
+  </svg>
+);
+
+function ComingSoon({ label, onBack, onHome }: { label: string; onBack: () => void; onHome?: () => void }) {
   return (
     <div className="coming-soon">
       <span className="coming-soon__icon">🚧</span>
@@ -291,7 +299,10 @@ function ComingSoon({ label, onBack }: { label: string; onBack: () => void }) {
         This feature is still under construction and will be available soon.
         <br />Stay tuned!
       </p>
-      <button className="coming-soon__back" onClick={onBack}>← Back to Menu</button>
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+        <button className="coming-soon__back" onClick={onBack}>← Back to Menu</button>
+        {onHome !== undefined && <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>}
+      </div>
     </div>
   );
 }
@@ -394,7 +405,7 @@ export function App() {
       );
 
     case 'simulator':
-      return <CircuitSimulator onBack={() => navigate({ id: 'simulator-mode' })} />;
+      return <CircuitSimulator onBack={() => navigate({ id: 'simulator-mode' })} onHome={goMain} />;
 
     case 'simulator-challenge':
       return (
@@ -417,6 +428,7 @@ export function App() {
         <ChallengeSession
           difficulty={difficulty}
           onBack={() => navigate({ id: 'simulator-challenge' })}
+          onHome={goMain}
         />
       );
     }
@@ -469,6 +481,7 @@ export function App() {
               ? navigate({ id: 'board-level', boardMode })
               : navigate({ id: 'board-mode' })
           }
+          onHome={goMain}
         />
       );
     }
@@ -528,6 +541,7 @@ export function App() {
             <ComingSoon
               label="One-on-One Formula Games"
               onBack={() => navigate({ id: 'formula-level', gameType, playMode })}
+              onHome={goMain}
             />
           </div>
         );
@@ -540,6 +554,7 @@ export function App() {
           playerName="Player"
           onSessionEnd={goMain}
           onBackToMenu={() => navigate({ id: 'formula-level', gameType, playMode })}
+          onHome={goMain}
         />
       );
     }

@@ -133,15 +133,26 @@ function DragPreview({ data }: { data: PaletteItemData | null }) {
 
 export interface CircuitSimulatorProps {
   onBack:             () => void;
+  onHome?:            () => void;
   challengeMode?:     boolean;
   /** Extra React nodes rendered in the topbar right section. */
   extraRightControls?: React.ReactNode;
+  /** Fixed-width panel rendered to the right of the canvas inside cs-body. */
+  rightSidebar?:      React.ReactNode;
   /** Mutable ref kept current with the latest CircuitState on every render.
    *  Read on-demand (e.g. on Submit) — causes no extra re-renders in the parent. */
   csRef?:             React.MutableRefObject<CircuitState | undefined>;
 }
 
-export function CircuitSimulator({ onBack, challengeMode, extraRightControls, csRef }: CircuitSimulatorProps) {
+const HouseIcon = () => (
+  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="1,8 8,2 15,8" />
+    <polyline points="4,8 4,14 12,14 12,8" />
+    <polyline points="6.5,14 6.5,10.5 9.5,10.5 9.5,14" />
+  </svg>
+);
+
+export function CircuitSimulator({ onBack, onHome, challengeMode, extraRightControls, rightSidebar, csRef }: CircuitSimulatorProps) {
   const managerRef = useRef(new CircuitStateManager());
   const [cs, setCs]         = useState<CircuitState>(() => managerRef.current.getState());
   const [mode, setMode]     = useState<SimulatorMode>('idle');
@@ -395,6 +406,9 @@ export function CircuitSimulator({ onBack, challengeMode, extraRightControls, cs
 
   function handleOutPort(nodeId: NodeId, portIndex: number, e: React.MouseEvent) {
     e.stopPropagation();
+    for (const wire of cs.wires.values()) {
+      if (wire.from.nodeId === nodeId && wire.from.portIndex === portIndex) return;
+    }
     const svg = document.querySelector('.circuit-canvas') as SVGSVGElement | null;
     if (!svg) return;
     const r  = svg.getBoundingClientRect();
@@ -472,6 +486,9 @@ export function CircuitSimulator({ onBack, challengeMode, extraRightControls, cs
         <div className="cs-topbar">
           <div className="cs-topbar__left">
             <button className="game-back-btn" onClick={onBack}>← Back to Menu</button>
+            {onHome !== undefined && (
+              <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>
+            )}
           </div>
           <div className="cs-topbar__center">
             <SimulatorControls
@@ -487,7 +504,7 @@ export function CircuitSimulator({ onBack, challengeMode, extraRightControls, cs
           </div>
         </div>
 
-        {/* Body — canvas fills all remaining space */}
+        {/* Body — canvas + optional right sidebar */}
         <div className="cs-body">
           <CircuitCanvas
             cs={animCs ?? cs}
@@ -507,6 +524,9 @@ export function CircuitSimulator({ onBack, challengeMode, extraRightControls, cs
             onInputSetValue={handleInputSetValue}
             onSplitSetOutputCount={handleSplitSetOutputCount}
           />
+          {rightSidebar !== undefined && (
+            <div className="cs-right-sidebar">{rightSidebar}</div>
+          )}
         </div>
 
         {/* Bottom toolbar: gate palette */}

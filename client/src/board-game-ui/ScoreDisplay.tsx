@@ -5,18 +5,21 @@ interface ScoreDisplayProps {
   scores:        PlayerScores;
   gameMode:      GameMode;
   optimalScore?: number;
+  /** Overrides scores.red for the "Your Score" display (used after revealing solution). */
+  playerScore?:  number;
   redLabel?:     string;
   blueLabel?:    string;
 }
 
-export function ScoreDisplay({ scores, gameMode, optimalScore, redLabel = 'Red', blueLabel = 'Blue' }: ScoreDisplayProps) {
+export function ScoreDisplay({ scores, gameMode, optimalScore, playerScore, redLabel = 'Red', blueLabel = 'Blue' }: ScoreDisplayProps) {
   if (gameMode === 'solo') {
-    const gap = optimalScore !== undefined ? optimalScore - scores.red : null;
+    const displayScore = playerScore !== undefined ? playerScore : scores.red;
+    const gap = optimalScore !== undefined ? optimalScore - displayScore : null;
     return (
       <div className="score-display score-display--solo">
         <div className="score-display__stat">
           <span className="score-display__stat-label">Your Score:</span>
-          <span className="score-display__stat-value score-display__stat-value--red">{scores.red}</span>
+          <span className="score-display__stat-value score-display__stat-value--red">{displayScore}</span>
         </div>
         <div className="score-display__stat-divider" />
         <div className="score-display__stat">
@@ -29,7 +32,7 @@ export function ScoreDisplay({ scores, gameMode, optimalScore, redLabel = 'Red',
         <div className="score-display__stat">
           <span className="score-display__stat-label">Gap:</span>
           <span className="score-display__stat-value">
-            {gap !== null ? (gap === 0 ? '0' : `−${gap}`) : ''}
+            {gap !== null ? gap : ''}
           </span>
         </div>
       </div>

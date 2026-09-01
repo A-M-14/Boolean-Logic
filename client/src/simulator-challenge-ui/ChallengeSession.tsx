@@ -4,16 +4,17 @@ import { generateChallenge, verifyCircuit } from '../simulator-challenge-engine/
 import type { CircuitState } from '../logic-circuit-simulator-engine/index.js';
 import { CircuitSimulator } from '../logic-circuit-simulator-ui/index.js';
 import { ChallengeControls } from './ChallengeControls.js';
-import { ChallengePanel }    from './ChallengePanel.js';
+import { ChallengeSidebar }  from './ChallengeSidebar.js';
 import { SubmissionResult }  from './SubmissionResult.js';
 import { SolutionDisplay }   from './SolutionDisplay.js';
 
 interface ChallengeSessionProps {
   difficulty: Difficulty;
   onBack:     () => void;
+  onHome?:    () => void;
 }
 
-export function ChallengeSession({ difficulty, onBack }: ChallengeSessionProps) {
+export function ChallengeSession({ difficulty, onBack, onHome }: ChallengeSessionProps) {
   const [challenge, setChallenge] = useState<Challenge>(() => generateChallenge(difficulty));
   // Incrementing this key force-remounts CircuitSimulator, resetting the canvas.
   const [sessionKey, setSessionKey] = useState(0);
@@ -22,14 +23,12 @@ export function ChallengeSession({ difficulty, onBack }: ChallengeSessionProps) 
   // Read on-demand when the user hits Submit — no extra re-renders.
   const csRef = useRef<CircuitState | undefined>(undefined);
 
-  const [panelOpen,        setPanelOpen]        = useState(false);
   const [submissionResult, setSubmissionResult] = useState<VerificationResult | null>(null);
   const [solutionOpen,     setSolutionOpen]     = useState(false);
 
   function handleNewChallenge() {
     setChallenge(generateChallenge(difficulty));
     setSessionKey(k => k + 1);
-    setPanelOpen(false);
     setSubmissionResult(null);
     setSolutionOpen(false);
   }
@@ -41,13 +40,18 @@ export function ChallengeSession({ difficulty, onBack }: ChallengeSessionProps) 
     setSubmissionResult(result);
   }
 
-  // Three buttons injected beside the Back button in the simulator topbar.
   const challengeControls = (
     <ChallengeControls
-      onViewChallenge={() => setPanelOpen(true)}
       onNewChallenge={handleNewChallenge}
       onSubmit={handleSubmit}
       onViewSolution={() => setSolutionOpen(true)}
+    />
+  );
+
+  const sidebar = (
+    <ChallengeSidebar
+      truthTable={challenge.truthTable}
+      difficulty={difficulty}
     />
   );
 
@@ -56,18 +60,12 @@ export function ChallengeSession({ difficulty, onBack }: ChallengeSessionProps) 
       <CircuitSimulator
         key={sessionKey}
         onBack={onBack}
+        onHome={onHome}
         challengeMode
         extraRightControls={challengeControls}
+        rightSidebar={sidebar}
         csRef={csRef}
       />
-
-      {panelOpen && (
-        <ChallengePanel
-          truthTable={challenge.truthTable}
-          difficulty={difficulty}
-          onClose={() => setPanelOpen(false)}
-        />
-      )}
 
       {submissionResult !== null && (
         <SubmissionResult

@@ -352,6 +352,11 @@ export function CircuitCanvas({
     }
   }
 
+  const occupiedOutPorts = new Set<string>();
+  for (const wire of cs.wires.values()) {
+    occupiedOutPorts.add(`${wire.from.nodeId}:${wire.from.portIndex}`);
+  }
+
   const transform = `translate(${zoomState.x},${zoomState.y}) scale(${zoomState.k})`;
   const isEmpty   = cs.nodes.size === 0;
 
@@ -492,6 +497,7 @@ export function CircuitCanvas({
                   key={node.id}
                   node={node}
                   hasPending={!!pending}
+                  outPortOccupied={occupiedOutPorts.has(`${node.id}:0`)}
                   onDown={down}
                   onDblClick={dbl}
                   onClick={click}
@@ -506,6 +512,7 @@ export function CircuitCanvas({
                   key={node.id}
                   node={node}
                   hasPending={!!pending}
+                  outPortOccupied={occupiedOutPorts.has(`${node.id}:0`)}
                   onDown={down}
                   onDblClick={dbl}
                   onClick={click}
@@ -533,6 +540,7 @@ export function CircuitCanvas({
                   key={node.id}
                   node={node}
                   hasPending={!!pending}
+                  outPortsOccupied={Array.from({ length: node.outputCount }, (_, i) => occupiedOutPorts.has(`${node.id}:${i}`))}
                   onDown={down}
                   onDblClick={dbl}
                   onBodyClick={click}

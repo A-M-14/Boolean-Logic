@@ -3,17 +3,18 @@ import type { SplitNode } from '../logic-circuit-simulator-engine/index.js';
 import { PORT_R, HIT_R, IN_HIT_R, getInputPort, getOutputPort } from './utils.js';
 
 interface WireSplitPointProps {
-  node:        SplitNode;
-  hasPending:  boolean;
-  onDown:      (e: React.MouseEvent) => void;
-  onDblClick:  (e: React.MouseEvent) => void;
-  onBodyClick: (e: React.MouseEvent) => void;
-  onOutPort:   (e: React.MouseEvent, portIndex: number) => void;
-  onInPort:    (e: React.MouseEvent) => void;
+  node:             SplitNode;
+  hasPending:       boolean;
+  outPortsOccupied: boolean[];
+  onDown:           (e: React.MouseEvent) => void;
+  onDblClick:       (e: React.MouseEvent) => void;
+  onBodyClick:      (e: React.MouseEvent) => void;
+  onOutPort:        (e: React.MouseEvent, portIndex: number) => void;
+  onInPort:         (e: React.MouseEvent) => void;
 }
 
 export function WireSplitPoint({
-  node, hasPending,
+  node, hasPending, outPortsOccupied,
   onDown, onDblClick, onBodyClick, onOutPort, onInPort,
 }: WireSplitPointProps) {
   const ip = getInputPort(node, 0);
@@ -53,14 +54,15 @@ export function WireSplitPoint({
 
       {/* Output ports — positions already rotated by getOutputPort */}
       {Array.from({ length: node.outputCount }, (_, i) => {
-        const pp = getOutputPort(node, i);
+        const pp       = getOutputPort(node, i);
+        const occupied = outPortsOccupied[i] ?? false;
         return (
           <g key={i}>
             <circle cx={pp.x} cy={pp.y} r={PORT_R}
-              fill="#151230" stroke="#64ffda88" strokeWidth={1.5}
+              fill="#151230" stroke={occupied ? '#374151' : '#64ffda88'} strokeWidth={1.5}
               style={{ pointerEvents: 'none' }} />
             <circle cx={pp.x} cy={pp.y} r={HIT_R} fill="transparent"
-              style={{ cursor: 'crosshair' }}
+              style={{ cursor: hasPending || occupied ? 'default' : 'pointer' }}
               onClick={e => onOutPort(e, i)} />
           </g>
         );

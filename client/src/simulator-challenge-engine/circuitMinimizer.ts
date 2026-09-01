@@ -123,7 +123,33 @@ function quineMcCluskey(minterms: number[], varCount: number): Implicant[] {
   return primeImplicants;
 }
 
-// ── Minimal cover (essential PIs + greedy) ────────────────────────────────────
+// ── Minimal cover (essential PIs + Petrick's method) ──────────────────────────
+
+/** Remove any set in `terms` that is a superset of another set in `terms`. */
+function absorb(terms: Set<number>[]): Set<number>[] {
+  const result: Set<number>[] = [];
+  outer: for (let i = 0; i < terms.length; i++) {
+    for (let j = 0; j < terms.length; j++) {
+      if (i === j) continue;
+      const tj = terms[j];
+      const ti = terms[i];
+      // terms[j] is a proper subset of terms[i] → drop terms[i]
+      if (tj.size < ti.size) {
+        let sub = true;
+        for (const x of tj) if (!ti.has(x)) { sub = false; break; }
+        if (sub) continue outer;
+      }
+      // terms[j] equals terms[i] and appeared earlier → drop terms[i]
+      if (tj.size === ti.size && j < i) {
+        let eq = true;
+        for (const x of tj) if (!ti.has(x)) { eq = false; break; }
+        if (eq) continue outer;
+      }
+    }
+    result.push(terms[i]);
+  }
+  return result;
+}
 
 function minimalCover(pis: Implicant[], minterms: number[], varCount: number): Implicant[] {
   if (minterms.length === 0 || pis.length === 0) return [];
@@ -157,19 +183,54 @@ function minimalCover(pis: Implicant[], minterms: number[], varCount: number): I
     }
   }
 
-  // Step 2: greedy cover for remaining uncovered minterms.
-  const uncovered = new Set([...coveredBy.keys()].filter(i => !covered.has(i)));
-  while (uncovered.size > 0) {
-    let best = '';
-    let bestCount = 0;
-    for (const [k, s] of coverage) {
-      if (selected.has(k)) continue;
-      const n = [...s].filter(m => uncovered.has(m)).length;
-      if (n > bestCount) { bestCount = n; best = k; }
+  // Step 2: Petrick's method for remaining uncovered minterms.
+  //
+  // Build the product-of-sums expression P where each sum factor lists the
+  // (indices of) candidate PIs that cover one uncovered minterm.  Expanding P
+  // via the distributive law yields every minimal cover; absorption prunes
+  // redundant supersets at each step.  The smallest resulting set is chosen,
+  // with ties broken by fewest total literals (more dashes = broader PIs).
+  const uncoveredMinterms = [...coveredBy.keys()].filter(i => !covered.has(i));
+  if (uncoveredMinterms.length > 0) {
+    const candidatePIs  = pis.filter(pi => !selected.has(impKey(pi)));
+    const candidateKeys = candidatePIs.map(impKey);
+
+    // For each uncovered minterm, indices into candidatePIs that cover it.
+    const mintermCoverers: number[][] = uncoveredMinterms.map(mintermIdx =>
+      candidateKeys.reduce<number[]>((acc, k, i) => {
+        if (coverage.get(k)!.has(mintermIdx)) acc.push(i);
+        return acc;
+      }, [])
+    );
+
+    // Initialise P from the first minterm's coverers.
+    let P: Set<number>[] = mintermCoverers[0].map(i => new Set([i]));
+
+    // Distribute each subsequent minterm's sum into P, then absorb.
+    for (let m = 1; m < mintermCoverers.length; m++) {
+      const newP: Set<number>[] = [];
+      for (const term of P) {
+        for (const pi of mintermCoverers[m]) {
+          const newTerm = new Set(term);
+          newTerm.add(pi);
+          newP.push(newTerm);
+        }
+      }
+      P = absorb(newP);
     }
-    if (!best) break;
-    selected.add(best);
-    for (const m of coverage.get(best)!) uncovered.delete(m);
+
+    if (P.length > 0) {
+      // Keep only minimum-cardinality sets.
+      const minSize = Math.min(...P.map(t => t.size));
+      const minimal = P.filter(t => t.size === minSize);
+
+      // Tie-break: fewest total literals (non-dash positions) across all PIs.
+      const countLits = (term: Set<number>) =>
+        [...term].reduce((sum, i) => sum + candidatePIs[i].filter(t => t !== '-').length, 0);
+
+      const best = minimal.reduce((a, b) => countLits(a) <= countLits(b) ? a : b);
+      for (const i of best) selected.add(candidateKeys[i]);
+    }
   }
 
   return pis.filter(pi => selected.has(impKey(pi)));
@@ -519,8 +580,7 @@ export function minimize(truthTable: TruthTable): MinimizationResult {
     let result = bestOf(candidates);
     let improved: MinimizationResult | null;
     while ((improved = xorXnorPass(result)) !== null) result = improved;
-    if (result !== bestOf(candidates)) candidates.push(result);
-    else candidates.push(result);           // always push so bestOf below sees it
+    candidates.push(result);
   }
 
   // ── Pass 5: Common factor extraction (applied to best so far, iterated) ──

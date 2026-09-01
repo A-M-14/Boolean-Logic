@@ -26,6 +26,27 @@ function binarySymbol(operator: BinaryOperator, notation: FormulaNotation): stri
   }
 }
 
+// ─── Plain-text serializer (mirrors renderNode for use in textarea) ───────────
+
+export function nodeToString(node: FormulaNode, notation: FormulaNotation): string {
+  switch (node.type) {
+    case 'variable':
+      return node.name;
+    case 'not': {
+      const inner = nodeToString(node.operand, notation);
+      if (notation === 'mathematical') return `¬${inner}`;
+      if (notation === 'c')           return `!${inner}`;
+      // text: binary already has outer parens; variable/not need explicit parens
+      return node.operand.type === 'binary' ? `not${inner}` : `not(${inner})`;
+    }
+    case 'binary': {
+      const left  = nodeToString(node.left,  notation);
+      const right = nodeToString(node.right, notation);
+      return `(${left} ${binarySymbol(node.operator, notation)} ${right})`;
+    }
+  }
+}
+
 // ─── Recursive renderer ───────────────────────────────────────────────────────
 
 function renderNode(node: FormulaNode, notation: FormulaNotation): React.ReactNode {

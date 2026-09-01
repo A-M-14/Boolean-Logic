@@ -19,8 +19,8 @@ export function DraftKeyboard({ onKey, onBackspace }: DraftKeyboardProps) {
   const variableKeys: KeyDefinition[] = ALL_VARIABLES.map(variable => ({ label: variable, value: variable }));
 
   const mathKeys: KeyDefinition[] = [
-    { label: '·',  value: '·'  },
-    { label: '+',  value: '+'  },
+    { label: '∧',  value: '∧'  },
+    { label: '∨',  value: '∨'  },
     { label: '⊕',  value: '⊕'  },
     { label: '¬',  value: '¬'  },
   ];

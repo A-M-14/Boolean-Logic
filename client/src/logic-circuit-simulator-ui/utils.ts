@@ -211,7 +211,9 @@ function nodeAABB(node: CircuitNode): AABB {
     const [hw, hh] = (node.rotation === 0 || node.rotation === 180)
       ? [GATE_W / 2, GATE_H / 2]
       : [GATE_H / 2, GATE_W / 2];
-    return { minX: x - hw, minY: y - hh, maxX: x + hw, maxY: y + hh };
+    // Extend maxY to include the label below the gate body.
+    // Label centre is at screenHH + 13 below gate centre; +20 clears the bottom edge.
+    return { minX: x - hw, minY: y - hh, maxX: x + hw, maxY: y + hh + 20 };
   }
   if (node.type === 'input' || node.type === 'output') {
     // Square box (rotation doesn't affect the AABB of a square).

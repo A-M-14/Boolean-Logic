@@ -23,13 +23,6 @@
   white-space:   nowrap;
 }
 
-/* Challenge Truth Table — cyan accent */
-.challenge-controls__btn--table:hover {
-  border-color: #64ffda;
-  color:        #64ffda;
-  box-shadow:   0 0 8px #64ffda22;
-}
-
 /* New Challenge — amber accent */
 .challenge-controls__btn--new:hover {
   border-color: #fbbf24;

@@ -1,6 +1,6 @@
 .draft-keyboard-container {
   position:       absolute;
-  bottom:         calc(100% + 4px);
+  top:            calc(100% + 4px);
   left:           0;
   right:          0;
   z-index:        300;
@@ -11,7 +11,7 @@
   background:     #1e1b3a;
   border:         1px solid #2d2a50;
   border-radius:  8px;
-  box-shadow:     0 -4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow:     0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .draft-keyboard-row {

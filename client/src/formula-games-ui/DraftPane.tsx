@@ -2,10 +2,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { DraftKeyboard } from './DraftKeyboard.js';
 import './DraftPane.css';
 
-export function DraftPane() {
+interface DraftPaneProps {
+  initialText?: string;
+}
+
+export function DraftPane({ initialText }: DraftPaneProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapperRef  = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !initialText) return;
+    const len = textarea.value.length;
+    textarea.focus();
+    textarea.setSelectionRange(len, len);
+  }, []);
 
   useEffect(() => {
     if (!keyboardOpen) return;
@@ -64,6 +76,7 @@ export function DraftPane() {
         <textarea
           ref={textareaRef}
           className="draft-pane-textarea"
+          defaultValue={initialText}
           placeholder="Draft area — write your working here…"
           spellCheck={false}
           autoComplete="off"

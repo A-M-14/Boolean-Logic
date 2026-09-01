@@ -5,8 +5,16 @@
  * Layout: nodes are arranged in a structured left-to-right grid.
  *   Column 0                : input nodes (used variables only, top-to-bottom A → last)
  *   Column 1  (if needed)   : NOT gates for negated variables (same row as their input)
- *   Columns 2 .. depth+1   : expression gates (leaves → root, left to right)
+ *   Columns 2 .. depth+1   : expression gates when NOT gates occupy col 1 (otherwise col 1+)
  *   Final column            : output node (same row as root gate)
+ *
+ * Row assignment (horizontal-first layout):
+ *   Each gate is placed at its preferred row = midpoint of its children's rows,
+ *   reserving the nearest free row in that column.  Because gates in different
+ *   columns share the same row-number space independently, only the widest
+ *   column (typically the first expression-gate column) drives the total height.
+ *   All gate y-values are exact multiples of ROW_H so that existing wire routing
+ *   safety guarantees remain intact.
  *
  * Wire routing: for every binary gate, port-0's wire turns at
  *   gateX − GATE_W/2 − STUB_LEN  (one stub-length before the gate's left edge)
@@ -31,10 +39,17 @@ import { getNegatedVars } from './circuitMinimizer.js';
 
 // ── Layout constants ───────────────────────────────────────────────────────────
 
-const COL_W    = 130;  // horizontal spacing between columns (px)
-const ROW_H    = 70;   // vertical spacing between node rows (px)
-const GATE_W   = 88;   // gate body width — must match logic-circuit-simulator-ui/utils.ts
-const STUB_LEN = 20;   // wire exit/entry stub length — must match utils.ts
+const COL_W        = 220;  // horizontal spacing between columns (px)
+const ROW_H        = 90;   // vertical spacing between node rows (px)
+const GATE_W       = 88;   // gate body width — must match logic-circuit-simulator-ui/utils.ts
+const GATE_H       = 52;   // gate body height — must match logic-circuit-simulator-ui/utils.ts
+const STUB_LEN     = 20;   // wire exit/entry stub length — must match utils.ts
+// Each gate in the same column is offset by TURN_STEP px so its wires use a
+// unique turn-x and can never share a vertical segment with a neighbour's wire.
+const TURN_STEP    = 8;
+// Each source row is offset by CHANNEL_STEP px so non-adjacent wires travelling
+// through the same inter-column channel use distinct vertical x-coordinates.
+const CHANNEL_STEP = 5;
 
 const VAR_NAMES_ALL = ['A', 'B', 'C', 'D', 'E'];
 
@@ -45,7 +60,7 @@ interface NodePort {
   readonly nodeId:    NodeId;
   readonly portIndex: number;
   readonly col:       number;  // x = col * COL_W
-  readonly y:         number;  // vertical centre of the node
+  readonly y:         number;  // vertical centre of the node (always a multiple of ROW_H)
 }
 
 type Port = { nodeId: NodeId; portIndex: number };
@@ -75,25 +90,72 @@ function getUsedVars(expr: Expr): Set<string> {
 }
 
 /**
+ * Reserves the nearest free, non-negative row to `preferredRow` in column
+ * `col`, then records it so future calls in the same column avoid it.
+ *
+ * The search radiates outward from Math.round(preferredRow): 0, +1, −1, +2,
+ * −2, … skipping negative values.  Because the used-set is always finite the
+ * loop always terminates.
+ */
+function reserveRow(
+  colRows: Map<number, Set<number>>,
+  col:     number,
+  preferredRow: number,
+): number {
+  const used  = colRows.get(col) ?? new Set<number>();
+  const start = Math.max(0, Math.floor(preferredRow));
+
+  for (let delta = 0; ; delta++) {
+    const candidates = delta === 0
+      ? [start]
+      : [start + delta, start - delta];
+    for (const r of candidates) {
+      if (r >= 0 && !used.has(r)) {
+        used.add(r);
+        colRows.set(col, used);
+        return r;
+      }
+    }
+  }
+}
+
+/**
  * Computes the waypoints and routeDir for one wire leading into a binary gate.
  *
- * Port 0 (top input):  turns at gateX − GATE_W/2 − 1·STUB_LEN
- * Port 1 (bottom input): turns at gateX − GATE_W/2 − 2·STUB_LEN
- *
- * These turn-x values differ by STUB_LEN (20 px), ensuring the two wires
- * always have distinct vertical segments and can never overlap.
+ * Turn-x is staggered by TURN_STEP per gate row so that every gate in the
+ * same column uses a distinct x for its vertical approach segment.  Without
+ * this, wires from different source rows that both connect (as port-0) to
+ * different gates in the same column would share the same x and their
+ * vertical segments would overlap.
  *
  * For adjacent columns (dstCol == srcCol + 1) a single waypoint suffices.
- * For non-adjacent columns the wire is routed through the inter-column channel
- * just right of the source, then travels horizontally in a safe lane (28 px
- * inside the gap between node rows) before turning at the gate.
+ * For non-adjacent columns the wire is also routed through a source-row-
+ * dependent channel x (CHANNEL_STEP per row) so that wires from different
+ * source rows use distinct vertical x-coordinates in the channel.
  */
 function gateWireWaypoints(
   srcCol: number, srcY: number,
   dstCol: number, gateX: number, gateY: number,
   portIndex: 0 | 1,
 ): { waypoints: readonly Waypoint[]; routeDir: 'H' | 'V' } {
-  const turnX = gateX - GATE_W / 2 - (portIndex === 0 ? STUB_LEN : 2 * STUB_LEN);
+  // Stagger turn-x by gate row: each gate in the same column gets a unique x
+  // so its wires never share a vertical segment with a neighbouring gate's wires.
+  const gateRow = Math.round(gateY / ROW_H);
+  const rawTurnX = gateX - GATE_W / 2 - STUB_LEN * (1 + portIndex) - gateRow * TURN_STEP;
+
+  // The near-destination vertical segment must stay in the inter-column
+  // corridor between the adjacent-left column's right edge and the destination
+  // gate's left edge.  As gateRow grows, rawTurnX can move left past the
+  // adjacent-left column's right edge (gateX − COL_W + GATE_W/2), causing the
+  // horizontal stub to run backwards through the source node's body and the
+  // downward turn to land inside that body.  Clamping keeps turnX strictly
+  // inside the corridor and to the right of the source exit stub.
+  //
+  // Port 0 uses an extra STUB_LEN offset so the two ports keep distinct x-values
+  // when both are clamped (port 0 sits 20 px to the right of port 1's minimum).
+  const turnXMin = gateX - COL_W + GATE_W / 2 + STUB_LEN + 1
+    + (portIndex === 0 ? STUB_LEN : 0);
+  const turnX = Math.max(rawTurnX, turnXMin);
 
   if (dstCol <= srcCol + 1) {
     // Adjacent columns: one waypoint pins the turn to the unique turnX.
@@ -103,18 +165,30 @@ function gateWireWaypoints(
     };
   }
 
-  // Non-adjacent: route through the inter-column channel just right of the
-  // source, then cross to the turn point in a safe horizontal lane.
-  const xCh1 = (srcCol + 0.5) * COL_W;
-  const dir   = Math.sign(gateY - srcY) || 1;
-  // 0.4 × ROW_H ≈ 28 px, which always falls in the safe gap between node rows
-  // (gate half-height is 26 px, input-circle radius is 24 px — both < 28 px).
-  const yGap  = srcY + dir * ROW_H * 0.4;
+  // Non-adjacent: route through a source-row-dependent inter-column channel,
+  // then cross to the turn point in a dedicated horizontal lane.
+  // CHANNEL_STEP offsets each source row's channel x so wires from different
+  // source rows never share a vertical segment in the inter-column channel.
+  // The yLane is anchored to gateY (not srcY) so port-0 and port-1 wires
+  // entering the same gate use different horizontal lanes:
+  //   port 0: gateY − 30  (above the gate body top at gateY − 26)
+  //   port 1: gateY + 50  (below the label bottom at approx. gateY + 44,
+  //                         so the wire never passes between the gate and its label)
+  // Because all gate y-values are multiples of ROW_H = 90, these offsets always
+  // land in the safe inter-gate spaces and never coincide with a gate body.
+  const srcRow = Math.round(srcY / ROW_H);
+
+  // Clamp xCh1 to the safe corridor between srcCol and srcCol+1, so the
+  // vertical channel segment never enters the (srcCol+1) gate column's body
+  // when the source has a large y (high srcRow).
+  const xCh1Max = (srcCol + 1) * COL_W - GATE_W / 2 - 1;
+  const xCh1 = Math.min((srcCol + 0.5) * COL_W + srcRow * CHANNEL_STEP, xCh1Max);
+  const yLane = gateY + (portIndex === 0 ? -(GATE_H / 2 + 4) : (GATE_H / 2 + 24));
 
   return {
     waypoints: [
-      { pos: { x: xCh1, y: srcY  }, enterDir: 'H' },
-      { pos: { x: turnX, y: yGap }, enterDir: 'H' },
+      { pos: { x: xCh1,  y: srcY  }, enterDir: 'H' },
+      { pos: { x: turnX, y: yLane }, enterDir: 'H' },
     ],
     routeDir: 'H',
   };
@@ -176,15 +250,24 @@ function addBinaryGate(
 /**
  * Recursively builds the expression sub-tree, creating gate nodes and wires.
  * Returns the output port of the top-most node created for `expr`.
- * `yCounter` is incremented each time a new expression gate is placed.
+ *
+ * Each gate reserves the nearest free row in its column, with the preferred
+ * row being the midpoint of its children's rows.  This keeps the layout
+ * compact: the circuit height grows with the widest single column, not with
+ * the total gate count across all columns.
+ *
+ * `minExprCol` is the lowest column an expression gate may occupy.  It is set
+ * to 2 when column 1 is already taken by pre-built NOT gates, preventing those
+ * gates from sharing a position with expression gates.
  */
 function buildExprNode(
-  expr:       Expr,
-  mgr:        CircuitStateManager,
-  inputMap:   Map<string, NodeId>,
-  notMap:     Map<string, NodeId>,
-  yCounter:   { value: number },
-  nodeY:      Map<NodeId, number>,
+  expr:        Expr,
+  mgr:         CircuitStateManager,
+  inputMap:    Map<string, NodeId>,
+  notMap:      Map<string, NodeId>,
+  colRows:     Map<number, Set<number>>,
+  nodeY:       Map<NodeId, number>,
+  minExprCol:  number,
 ): NodePort {
   switch (expr.kind) {
 
@@ -206,12 +289,13 @@ function buildExprNode(
       if (expr.child.kind === 'lit') {
         return buildExprNode(
           { kind: 'lit', var: expr.child.var, neg: true },
-          mgr, inputMap, notMap, yCounter, nodeY,
+          mgr, inputMap, notMap, colRows, nodeY, minExprCol,
         );
       }
-      const childPort = buildExprNode(expr.child, mgr, inputMap, notMap, yCounter, nodeY);
-      const col = childPort.col + 1;
-      const y   = yCounter.value++ * ROW_H;
+      const childPort = buildExprNode(expr.child, mgr, inputMap, notMap, colRows, nodeY, minExprCol);
+      const col = Math.max(minExprCol, childPort.col + 1);
+      const row = reserveRow(colRows, col, childPort.y / ROW_H);
+      const y   = row * ROW_H;
       const id  = mgr.addNode({ type: 'gate', gateType: 'NOT', position: { x: col * COL_W, y } });
       mgr.addWire(toPort(childPort), { nodeId: id, portIndex: 0 },
         singleWireWaypoints(childPort.col, childPort.y, col, y));
@@ -224,27 +308,30 @@ function buildExprNode(
       const innerType: GateType = expr.kind === 'nand' ? 'AND' : 'OR';
       const outerType: GateType = expr.kind === 'nand' ? 'NAND' : 'NOR';
       const childPorts = expr.children.map(c =>
-        buildExprNode(c, mgr, inputMap, notMap, yCounter, nodeY)
+        buildExprNode(c, mgr, inputMap, notMap, colRows, nodeY, minExprCol)
       );
       let current = childPorts[0];
       for (let i = 1; i < childPorts.length - 1; i++) {
-        const col = Math.max(current.col, childPorts[i].col) + 1;
-        const y   = yCounter.value++ * ROW_H;
+        const col = Math.max(minExprCol, Math.max(current.col, childPorts[i].col) + 1);
+        const row = reserveRow(colRows, col, (current.y + childPorts[i].y) / (2 * ROW_H));
+        const y   = row * ROW_H;
         current = addBinaryGate(mgr, innerType, col, y, current, childPorts[i]);
       }
       const last = childPorts[childPorts.length - 1];
-      const col  = Math.max(current.col, last.col) + 1;
-      const y    = yCounter.value++ * ROW_H;
+      const col  = Math.max(minExprCol, Math.max(current.col, last.col) + 1);
+      const row  = reserveRow(colRows, col, (current.y + last.y) / (2 * ROW_H));
+      const y    = row * ROW_H;
       return addBinaryGate(mgr, outerType, col, y, current, last);
     }
 
     // ── XOR / XNOR ────────────────────────────────────────────────────────
     case 'xor':
     case 'xnor': {
-      const leftPort  = buildExprNode(expr.left,  mgr, inputMap, notMap, yCounter, nodeY);
-      const rightPort = buildExprNode(expr.right, mgr, inputMap, notMap, yCounter, nodeY);
-      const col      = Math.max(leftPort.col, rightPort.col) + 1;
-      const y        = yCounter.value++ * ROW_H;
+      const leftPort  = buildExprNode(expr.left,  mgr, inputMap, notMap, colRows, nodeY, minExprCol);
+      const rightPort = buildExprNode(expr.right, mgr, inputMap, notMap, colRows, nodeY, minExprCol);
+      const col      = Math.max(minExprCol, Math.max(leftPort.col, rightPort.col) + 1);
+      const row      = reserveRow(colRows, col, (leftPort.y + rightPort.y) / (2 * ROW_H));
+      const y        = row * ROW_H;
       const gateType: GateType = expr.kind === 'xor' ? 'XOR' : 'XNOR';
       return addBinaryGate(mgr, gateType, col, y, leftPort, rightPort);
     }
@@ -254,13 +341,14 @@ function buildExprNode(
     case 'or': {
       const gateType: GateType = expr.kind === 'and' ? 'AND' : 'OR';
       const childPorts = expr.children.map(c =>
-        buildExprNode(c, mgr, inputMap, notMap, yCounter, nodeY)
+        buildExprNode(c, mgr, inputMap, notMap, colRows, nodeY, minExprCol)
       );
       // Chain binary gates left-to-right: AND(a,b,c) → AND(AND(a,b), c)
       let current = childPorts[0];
       for (let i = 1; i < childPorts.length; i++) {
-        const col = Math.max(current.col, childPorts[i].col) + 1;
-        const y   = yCounter.value++ * ROW_H;
+        const col = Math.max(minExprCol, Math.max(current.col, childPorts[i].col) + 1);
+        const row = reserveRow(colRows, col, (current.y + childPorts[i].y) / (2 * ROW_H));
+        const y   = row * ROW_H;
         current = addBinaryGate(mgr, gateType, col, y, current, childPorts[i]);
       }
       return current;
@@ -323,8 +411,17 @@ export function buildSolution(result: MinimizationResult, varCount: number): Cir
   }
 
   // ── Expression gate tree ──────────────────────────────────────────────────
-  const yCounter = { value: 0 };
-  const outPort  = buildExprNode(expr, mgr, inputMap, notMap, yCounter, nodeY);
+  // Column 1 is reserved for pre-built NOT gates when any negated variable
+  // exists.  Setting minExprCol=2 prevents expression gates from landing on
+  // the same column (and potentially the same row) as those NOT gates.
+  const minExprCol = negVarSet.size > 0 ? 2 : 1;
+
+  // Per-column row reservation: each column tracks which integer row numbers
+  // are already occupied.  Gates pick the nearest free row to their midpoint-
+  // preferred position, keeping all y-values as multiples of ROW_H.
+  const colRows = new Map<number, Set<number>>();
+
+  const outPort  = buildExprNode(expr, mgr, inputMap, notMap, colRows, nodeY, minExprCol);
 
   // ── Final column: output node on the same row as the root gate ────────────
   const outCol = outPort.col + 1;

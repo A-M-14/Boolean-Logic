@@ -1,0 +1,88 @@
+.chal-sidebar {
+  display:        flex;
+  flex-direction: column;
+  height:         100%;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.chal-sidebar__header {
+  display:       flex;
+  align-items:   center;
+  gap:           0.5rem;
+  padding:       0.65rem 0.75rem 0.55rem;
+  border-bottom: 1px solid #1e1b3a;
+  flex-shrink:   0;
+}
+
+.chal-sidebar__title {
+  color:       #e2e8f0;
+  flex:        1;
+  font-size:   0.82rem;
+  font-weight: 700;
+}
+
+.chal-sidebar__badge {
+  border-radius:  20px;
+  font-size:      0.65rem;
+  font-weight:    700;
+  letter-spacing: 0.05em;
+  padding:        0.15rem 0.45rem;
+  text-transform: uppercase;
+}
+
+.chal-sidebar__badge--easy   { background: #064e3b; border: 1px solid #4ade8055; color: #4ade80; }
+.chal-sidebar__badge--medium { background: #2d1f00; border: 1px solid #f59e0b55; color: #f59e0b; }
+.chal-sidebar__badge--hard   { background: #3b0a0a; border: 1px solid #f8717155; color: #f87171; }
+
+/* ── Scrollable body ─────────────────────────────────────────────────────── */
+
+.chal-sidebar__body {
+  overflow-y: auto;
+  flex:       1;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+
+.chal-sidebar__table {
+  border-collapse: collapse;
+  font-family:     'Courier New', Courier, monospace;
+  font-size:       0.8rem;
+  width:           100%;
+}
+
+.chal-sidebar__table th {
+  background:     #1e1b3a;
+  color:          #94a3b8;
+  font-size:      0.72rem;
+  font-weight:    700;
+  letter-spacing: 0.05em;
+  padding:        0.35rem 0;
+  position:       sticky;
+  text-align:     center;
+  top:            0;
+  z-index:        1;
+}
+
+.chal-sidebar__out-header {
+  border-left: 1px solid #2d2a50;
+  color:       #64ffda !important;
+}
+
+.chal-sidebar__table td {
+  color:      #94a3b8;
+  padding:    0.25rem 0;
+  text-align: center;
+}
+
+.chal-sidebar__table tbody tr:hover {
+  background: #1e1b3a44;
+}
+
+.chal-sidebar__out-cell {
+  border-left: 1px solid #2d2a50;
+  font-weight: 700;
+}
+
+.chal-sidebar__out-cell--one  { color: #4ade80; }
+.chal-sidebar__out-cell--zero { color: #f87171; }

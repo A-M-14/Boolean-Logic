@@ -2,6 +2,14 @@ import React from 'react';
 import type { RoundRecord } from './types.js';
 import './SessionSummary.css';
 
+const HouseIcon = () => (
+  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="1,8 8,2 15,8" />
+    <polyline points="4,8 4,14 12,14 12,8" />
+    <polyline points="6.5,14 6.5,10.5 9.5,10.5 9.5,14" />
+  </svg>
+);
+
 type SessionSummaryProps =
   | {
       mode:            'solo';
@@ -11,6 +19,7 @@ type SessionSummaryProps =
       onMenu:          () => void;
       onReviewRound?:  (index: number) => void;
       onBackToMenu?:   () => void;
+      onHome?:         () => void;
     }
   | {
       mode:            'online';
@@ -22,6 +31,7 @@ type SessionSummaryProps =
       onMenu:          () => void;
       onReviewRound?:  (index: number) => void;
       onBackToMenu?:   () => void;
+      onHome?:         () => void;
     };
 
 function formatAnswer(record: RoundRecord): string {
@@ -40,7 +50,7 @@ function RoundsTable({
   return (
     <div className="summary-table-wrapper">
       {onReviewRound !== undefined && (
-        <p className="summary-review-hint">Click on a round row to review it.</p>
+        <p className="summary-review-hint">Click on a round row to view the round and the solution.</p>
       )}
       <table className="summary-rounds-table">
       <thead>
@@ -77,9 +87,14 @@ export function SessionSummary(props: SessionSummaryProps) {
   if (props.mode === 'solo') {
     return (
       <div className="session-summary">
-        {props.onBackToMenu !== undefined && (
+        {(props.onBackToMenu !== undefined || props.onHome !== undefined) && (
           <div className="summary-top-bar">
-            <button className="game-back-btn" onClick={props.onBackToMenu}>← Back to Menu</button>
+            {props.onBackToMenu !== undefined && (
+              <button className="game-back-btn" onClick={props.onBackToMenu}>← Back to Menu</button>
+            )}
+            {props.onHome !== undefined && (
+              <button className="home-btn" onClick={props.onHome}><HouseIcon /> Home</button>
+            )}
           </div>
         )}
         <h2 className="summary-title">Session Complete</h2>
@@ -102,9 +117,14 @@ export function SessionSummary(props: SessionSummaryProps) {
 
   return (
     <div className="session-summary">
-      {props.onBackToMenu !== undefined && (
+      {(props.onBackToMenu !== undefined || props.onHome !== undefined) && (
         <div className="summary-top-bar">
-          <button className="game-back-btn" onClick={props.onBackToMenu}>← Back to Menu</button>
+          {props.onBackToMenu !== undefined && (
+            <button className="game-back-btn" onClick={props.onBackToMenu}>← Back to Menu</button>
+          )}
+          {props.onHome !== undefined && (
+            <button className="home-btn" onClick={props.onHome}><HouseIcon /> Home</button>
+          )}
         </div>
       )}
       <h2 className="summary-title">

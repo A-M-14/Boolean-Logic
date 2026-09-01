@@ -4,11 +4,13 @@ import { evaluateFormula } from '@boolean-logic/shared';
 import './TruthTableDisplay.css';
 
 interface TruthTableDisplayProps {
-  formula: Formula;
-  label?:  string;
+  formula:  Formula;
+  label?:   string;
+  /** Overrides the auto-generated "Formula {label}" heading when set. */
+  heading?: string;
 }
 
-export function TruthTableDisplay({ formula, label }: TruthTableDisplayProps) {
+export function TruthTableDisplay({ formula, label, heading }: TruthTableDisplayProps) {
   const vars = [...formula.variables].sort();
   const n    = vars.length;
 
@@ -21,9 +23,11 @@ export function TruthTableDisplay({ formula, label }: TruthTableDisplayProps) {
     return { assignment, result: evaluateFormula(formula.root, assignment) };
   });
 
+  const headingText = heading ?? (label ? `Formula ${label}` : undefined);
+
   return (
     <div className="truth-table-wrapper">
-      {label && <div className="truth-table-heading">Formula {label}</div>}
+      {headingText && <div className="truth-table-heading">{headingText}</div>}
       <table className="truth-table">
         <thead>
           <tr>

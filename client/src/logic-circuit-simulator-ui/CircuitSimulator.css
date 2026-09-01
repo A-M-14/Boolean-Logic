@@ -28,6 +28,12 @@
   flex: 1;
 }
 
+.cs-topbar__left {
+  display:     flex;
+  align-items: center;
+  gap:         0.5rem;
+}
+
 .cs-topbar__right {
   align-items:     center;
   display:         flex;
@@ -46,6 +52,18 @@
   flex:     1;
   overflow: hidden;
   display:  flex;
+}
+
+/* ── Right sidebar ────────────────────────────────────────────────────────── */
+
+.cs-right-sidebar {
+  flex-shrink:    0;
+  width:          220px;
+  border-left:    1px solid #1e1b3a;
+  background:     #0a0918;
+  display:        flex;
+  flex-direction: column;
+  overflow:       hidden;
 }
 
 /* ── Bottom toolbar ───────────────────────────────────────────────────────── */

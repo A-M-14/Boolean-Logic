@@ -10,6 +10,7 @@ export interface BoardGameSessionProps {
   playerName?:   string;       // online only
   opponentName?: string;       // online only
   onBack:        () => void;
+  onHome?:       () => void;
 }
 
 // ─── WebSocket protocol ───────────────────────────────────────────────────────

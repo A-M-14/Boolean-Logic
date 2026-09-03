@@ -13,11 +13,7 @@ import { ScoreDisplay }      from './ScoreDisplay.js';
 import { TurnIndicator }     from './TurnIndicator.js';
 import { GameResultDisplay } from './GameResultDisplay.js';
 import { RulesDialog }       from './RulesDialog.js';
-import type {
-  BoardGameSessionProps,
-  BoardServerToClientMessage,
-  BoardClientToServerMessage,
-} from './types.js';
+import type { BoardGameSessionProps } from './types.js';
 import './BoardGameSession.css';
 
 const HouseIcon = () => (
@@ -42,6 +38,7 @@ export function BoardGameSession({
   opponentName = 'Opponent',
   onBack,
   onHome,
+  onPlayAgain: onPlayAgainProp,
 }: BoardGameSessionProps) {
 
   const isOnline = boardMode === 'online';
@@ -66,40 +63,46 @@ export function BoardGameSession({
   const [solutionRevealed,    setSolutionRevealed]    = useState(false);
   const [victoryDismissed,    setVictoryDismissed]    = useState(false);
   const [playerScoreAtReveal, setPlayerScoreAtReveal] = useState<number | null>(null);
-  const [resultDismissed,     setResultDismissed]     = useState(false);
+  const [resultDismissed,      setResultDismissed]      = useState(false);
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
   const boardStateRef = useRef<BoardState | null>(boardState);
   boardStateRef.current = boardState;
 
-  // ─── Online: handle incoming WebSocket messages ───────────────────────────
+  // ─── Online: handle incoming Socket.IO events ────────────────────────────
   useEffect(() => {
     if (!isOnline || socket == null) return;
 
-    function onMessage(event: MessageEvent) {
-      const message = JSON.parse(event.data as string) as BoardServerToClientMessage;
+    socket.on('board:game_start', (data) => {
+      setLocalPlayer(data.yourPlayer);
+      setBoardState(data.state);
+      setWaitingForServer(false);
+    });
 
-      switch (message.type) {
-        case 'game_start':
-          setLocalPlayer(message.yourPlayer);
-          setBoardState(message.state);
-          setWaitingForServer(false);
-          break;
+    socket.on('board:state_update', (data) => {
+      setBoardState(data.state);
+      setWaitingForServer(false);
+    });
 
-        case 'state_update':
-          setBoardState(message.state);
-          setWaitingForServer(false);
-          break;
+    socket.on('board:game_end', (data) => {
+      setBoardState(data.finalState);
+      setWaitingForServer(false);
+      setPhase('result');
+    });
 
-        case 'game_end':
-          setBoardState(message.finalState);
-          setWaitingForServer(false);
-          setPhase('result');
-          break;
-      }
-    }
+    socket.on('opponent:disconnected', () => setOpponentDisconnected(true));
 
-    socket.addEventListener('message', onMessage);
-    return () => socket.removeEventListener('message', onMessage);
+    // All listeners are registered — tell the server we are ready.
+    // The server will not emit board:game_start until both players signal
+    // ready, preventing the race where the event arrives before this effect runs.
+    socket.emit('board:ready');
+
+    return () => {
+      socket.off('board:game_start');
+      socket.off('board:state_update');
+      socket.off('board:game_end');
+      socket.off('opponent:disconnected');
+    };
   }, [isOnline, socket]);
 
   // ─── vs-computer: trigger computer move when it's the computer's turn ─────
@@ -144,6 +147,7 @@ export function BoardGameSession({
   // ─── Board disabled logic ─────────────────────────────────────────────────
   const boardDisabled = (() => {
     if (phase !== 'playing' || boardState === null) return true;
+    if (opponentDisconnected) return true;
     if (boardMode === 'single') {
       return solutionRevealed || isVictory;
     }
@@ -159,8 +163,7 @@ export function BoardGameSession({
 
     if (isOnline) {
       if (waitingForServer) return;
-      const message: BoardClientToServerMessage = { type: 'move', row, col, value };
-      socket?.send(JSON.stringify(message));
+      socket?.emit('board:move', { row, col, value });
       setWaitingForServer(true);
       return;
     }
@@ -336,17 +339,12 @@ export function BoardGameSession({
                 <span className="board-game-session__result-score board-game-session__result-score--red">{redLabel}: {scores.red}</span>
               </div>
               <div className="board-game-session__result-actions">
-                {!isOnline && (
-                  <button className="board-game-session__result-btn board-game-session__result-btn--primary" onClick={handlePlayAgain}>
-                    Play Again
-                  </button>
-                )}
-                <div className="board-game-session__result-back-row">
-                  <button className="board-game-session__result-btn board-game-session__result-btn--secondary" onClick={onBack}>
-                    ← Back to Menu
-                  </button>
-                  {onHome !== undefined && <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>}
-                </div>
+                <button
+                  className="board-game-session__result-btn board-game-session__result-btn--primary"
+                  onClick={isOnline && onPlayAgainProp ? onPlayAgainProp : handlePlayAgain}
+                >
+                  Play Again
+                </button>
               </div>
             </div>
           </div>
@@ -369,6 +367,32 @@ export function BoardGameSession({
 
       {rulesOpen && (
         <RulesDialog boardMode={boardMode} onClose={() => setRulesOpen(false)} />
+      )}
+
+      {opponentDisconnected && (
+        <div className="board-game-session__disconnect-overlay">
+          <div className="board-game-session__result-modal">
+            <p className="board-game-session__result-title" style={{ color: '#94a3b8' }}>
+              Opponent Disconnected
+            </p>
+            <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem' }}>
+              Your opponent has left the game.
+            </p>
+            <div className="board-game-session__result-actions">
+              <div className="board-game-session__result-back-row">
+                <button
+                  className="board-game-session__result-btn board-game-session__result-btn--secondary"
+                  onClick={onBack}
+                >
+                  ← Back to Menu
+                </button>
+                {onHome !== undefined && (
+                  <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

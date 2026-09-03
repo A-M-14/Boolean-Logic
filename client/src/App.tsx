@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import type { Difficulty } from '@boolean-logic/shared';
 import type { GameType } from './formula-games-ui/types.js';
 import { FormulaGameSession } from './formula-games-ui/FormulaGameSession.js';
@@ -7,7 +9,11 @@ import { ChallengeSession } from './simulator-challenge-ui/index.js';
 import { BoardGameSession } from './board-game-ui/index.js';
 import type { BoardMode } from './board-game-ui/index.js';
 import './App.css';
-type FormulaPlayMode = 'solo'   | 'one-on-one';
+
+const SERVER_URL    = (import.meta.env['VITE_SERVER_URL']        as string | undefined) ?? 'http://localhost:3001';
+const CLIENT_SECRET = (import.meta.env['VITE_CLIENT_SECRET_KEY'] as string | undefined);
+
+type FormulaPlayMode = 'solo' | 'one-on-one';
 
 type Screen =
   | { id: 'main' }
@@ -18,10 +24,130 @@ type Screen =
   | { id: 'board-mode' }
   | { id: 'board-level'; boardMode: BoardMode }
   | { id: 'board-game';  boardMode: BoardMode; difficulty?: Difficulty }
+  | { id: 'board-nickname' }
+  | { id: 'board-matchmaking' }
+  | { id: 'board-online-game'; opponentNickname: string }
   | { id: 'formula-type' }
   | { id: 'formula-play-mode'; gameType: GameType }
   | { id: 'formula-level'; gameType: GameType; playMode: FormulaPlayMode }
-  | { id: 'formula-game';  gameType: GameType; playMode: FormulaPlayMode; difficulty: Difficulty };
+  | { id: 'formula-game';  gameType: GameType; playMode: FormulaPlayMode; difficulty: Difficulty }
+  | { id: 'formula-nickname';    gameType: GameType; difficulty: Difficulty }
+  | { id: 'formula-matchmaking'; gameType: GameType; difficulty: Difficulty }
+  | { id: 'formula-online-game'; gameType: GameType; difficulty: Difficulty; opponentNickname: string };
+
+// ─── Nickname Screen ──────────────────────────────────────────────────────────
+
+function NicknameScreen({
+  initialValue,
+  onContinue,
+  onBack,
+}: {
+  initialValue: string;
+  onContinue:   (nickname: string) => void;
+  onBack:       () => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const trimmed = value.trim();
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' && trimmed !== '') onContinue(trimmed);
+  }
+
+  return (
+    <div className="app">
+      <div className="nickname-screen">
+        <button className="submenu__back" onClick={onBack}>← Back</button>
+        <div className="nickname-screen__body">
+          <h2 className="nickname-screen__title">Choose a Nickname</h2>
+          <p className="nickname-screen__subtitle">This name will be shown to your opponent.</p>
+          <input
+            className="nickname-screen__input"
+            type="text"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Your nickname"
+            maxLength={24}
+            autoFocus
+          />
+          <button
+            className="nickname-screen__continue"
+            onClick={() => onContinue(trimmed)}
+            disabled={trimmed === ''}
+          >
+            Continue →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Matchmaking Screen ───────────────────────────────────────────────────────
+
+function MatchmakingScreen({
+  gameType,
+  difficulty,
+  nickname,
+  onMatched,
+  onBack,
+}: {
+  gameType:    'board' | 'evaluation' | 'equivalence';
+  difficulty?: Difficulty;
+  nickname:    string;
+  onMatched:   (socket: Socket, opponentNickname: string) => void;
+  onBack:      () => void;
+}) {
+  const [status, setStatus] = useState<'connecting' | 'waiting' | 'error'>('connecting');
+
+  useEffect(() => {
+    const socket = io(SERVER_URL, {
+      auth: CLIENT_SECRET ? { token: CLIENT_SECRET } : {},
+    });
+    let matched = false;
+
+    socket.on('connect', () => {
+      socket.emit('matchmaking:join', { gameType, difficulty, nickname });
+    });
+
+    socket.on('matchmaking:waiting', () => setStatus('waiting'));
+
+    socket.on('matchmaking:matched', (data: { opponentNickname?: string }) => {
+      matched = true;
+      onMatched(socket, data.opponentNickname ?? 'Opponent');
+    });
+
+    socket.on('connect_error', () => setStatus('error'));
+
+    return () => {
+      socket.off('connect');
+      socket.off('matchmaking:waiting');
+      socket.off('matchmaking:matched');
+      socket.off('connect_error');
+      if (!matched) socket.disconnect();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="app">
+      <div className="coming-soon">
+        {status === 'error' ? (
+          <>
+            <p className="coming-soon__message">Could not connect to the server.</p>
+            <button className="coming-soon__back" onClick={onBack}>← Back</button>
+          </>
+        ) : (
+          <>
+            <p className="coming-soon__message">
+              {status === 'connecting' ? 'Connecting…' : 'Searching for an opponent…'}
+            </p>
+            <button className="coming-soon__back" onClick={onBack}>Cancel</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── Logo SVG ─────────────────────────────────────────────────────────────────
 
@@ -337,9 +463,9 @@ const CHALLENGE_DIFFICULTY_OPTIONS: MenuOption[] = [
 ];
 
 const BOARD_MODE_OPTIONS: MenuOption[] = [
-  { icon: '👤', label: 'Single Player',    desc: 'Play a solo puzzle session',     value: 'single'      },
-  { icon: '👥', label: 'One-on-One',       desc: 'Two players on the same device', value: 'one-on-one'  },
-  { icon: '🤖', label: 'Against Computer', desc: 'Challenge an AI opponent',       value: 'vs-computer' },
+  { icon: '👤', label: 'Single Player',    desc: 'Play a solo puzzle session',         value: 'single'      },
+  { icon: '👥', label: 'One-on-One',       desc: 'Play against another player online', value: 'one-on-one'  },
+  { icon: '🤖', label: 'Against Computer', desc: 'Challenge a computer opponent',       value: 'vs-computer' },
 ];
 
 const FORMULA_PLAY_MODE_OPTIONS: MenuOption[] = [
@@ -374,10 +500,17 @@ const FORMULA_TYPE_OPTIONS: MenuOption[] = [
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export function App() {
-  const [screen, setScreen] = useState<Screen>({ id: 'main' });
+  const [screen, setScreen]           = useState<Screen>({ id: 'main' });
+  const [onlineSocket, setOnlineSocket] = useState<Socket | null>(null);
+  const [nickname, setNickname]         = useState('');
 
   function navigate(s: Screen) { setScreen(s); }
   function goMain()            { setScreen({ id: 'main' }); }
+
+  function disconnectOnlineSocket() {
+    onlineSocket?.disconnect();
+    setOnlineSocket(null);
+  }
 
   switch (screen.id) {
 
@@ -442,7 +575,9 @@ export function App() {
             options={BOARD_MODE_OPTIONS}
             onSelect={value => {
               const boardMode = value as BoardMode;
-              if (boardMode === 'vs-computer') {
+              if (boardMode === 'one-on-one') {
+                navigate({ id: 'board-nickname' });
+              } else if (boardMode === 'vs-computer') {
                 navigate({ id: 'board-level', boardMode });
               } else {
                 navigate({ id: 'board-game', boardMode });
@@ -452,6 +587,51 @@ export function App() {
           />
         </div>
       );
+
+    case 'board-nickname':
+      return (
+        <NicknameScreen
+          initialValue={nickname}
+          onContinue={(chosen) => {
+            setNickname(chosen);
+            navigate({ id: 'board-matchmaking' });
+          }}
+          onBack={() => navigate({ id: 'board-mode' })}
+        />
+      );
+
+    case 'board-matchmaking':
+      return (
+        <MatchmakingScreen
+          gameType="board"
+          nickname={nickname}
+          onMatched={(socket, opponentNickname) => {
+            setOnlineSocket(socket);
+            navigate({ id: 'board-online-game', opponentNickname });
+          }}
+          onBack={() => navigate({ id: 'board-nickname' })}
+        />
+      );
+
+    case 'board-online-game': {
+      const { opponentNickname } = screen;
+      return onlineSocket ? (
+        <BoardGameSession
+          boardMode="online"
+          socket={onlineSocket}
+          opponentName={opponentNickname}
+          onPlayAgain={() => {
+            disconnectOnlineSocket();
+            navigate({ id: 'board-matchmaking' });
+          }}
+          onBack={() => {
+            disconnectOnlineSocket();
+            navigate({ id: 'board-mode' });
+          }}
+          onHome={() => { disconnectOnlineSocket(); goMain(); }}
+        />
+      ) : null;
+    }
 
     case 'board-level': {
       const { boardMode } = screen;
@@ -524,9 +704,14 @@ export function App() {
             title="Choose Difficulty"
             subtitle="Select a challenge level"
             options={DIFFICULTY_OPTIONS}
-            onSelect={value =>
-              navigate({ id: 'formula-game', gameType, playMode, difficulty: value as Difficulty })
-            }
+            onSelect={value => {
+              const difficulty = value as Difficulty;
+              if (playMode === 'one-on-one') {
+                navigate({ id: 'formula-nickname', gameType, difficulty });
+              } else {
+                navigate({ id: 'formula-game', gameType, playMode, difficulty });
+              }
+            }}
             onBack={() => navigate({ id: 'formula-play-mode', gameType })}
           />
         </div>
@@ -535,17 +720,6 @@ export function App() {
 
     case 'formula-game': {
       const { gameType, playMode, difficulty } = screen;
-      if (playMode === 'one-on-one') {
-        return (
-          <div className="app">
-            <ComingSoon
-              label="One-on-One Formula Games"
-              onBack={() => navigate({ id: 'formula-level', gameType, playMode })}
-              onHome={goMain}
-            />
-          </div>
-        );
-      }
       return (
         <FormulaGameSession
           gameType={gameType}
@@ -557,6 +731,63 @@ export function App() {
           onHome={goMain}
         />
       );
+    }
+
+    case 'formula-nickname': {
+      const { gameType, difficulty } = screen;
+      return (
+        <NicknameScreen
+          initialValue={nickname}
+          onContinue={(chosen) => {
+            setNickname(chosen);
+            navigate({ id: 'formula-matchmaking', gameType, difficulty });
+          }}
+          onBack={() => navigate({ id: 'formula-level', gameType, playMode: 'one-on-one' })}
+        />
+      );
+    }
+
+    case 'formula-matchmaking': {
+      const { gameType, difficulty } = screen;
+      return (
+        <MatchmakingScreen
+          gameType={gameType}
+          difficulty={difficulty}
+          nickname={nickname}
+          onMatched={(socket, opponentNickname) => {
+            setOnlineSocket(socket);
+            navigate({ id: 'formula-online-game', gameType, difficulty, opponentNickname });
+          }}
+          onBack={() => navigate({ id: 'formula-nickname', gameType, difficulty })}
+        />
+      );
+    }
+
+    case 'formula-online-game': {
+      const { gameType, difficulty, opponentNickname } = screen;
+      return onlineSocket ? (
+        <FormulaGameSession
+          gameType={gameType}
+          mode="online"
+          difficulty={difficulty}
+          socket={onlineSocket}
+          playerName="You"
+          opponentName={opponentNickname}
+          onSessionEnd={() => {
+            disconnectOnlineSocket();
+            goMain();
+          }}
+          onPlayAgain={() => {
+            disconnectOnlineSocket();
+            navigate({ id: 'formula-matchmaking', gameType, difficulty });
+          }}
+          onBackToMenu={() => {
+            disconnectOnlineSocket();
+            navigate({ id: 'formula-level', gameType, playMode: 'one-on-one' });
+          }}
+          onHome={() => { disconnectOnlineSocket(); goMain(); }}
+        />
+      ) : null;
     }
   }
 }

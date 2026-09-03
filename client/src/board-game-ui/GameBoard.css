@@ -24,10 +24,14 @@
   pointer-events: none;
 }
 
-/* Blocks all pointer interaction during computer's turn */
+/* Dims the board and blocks bit-cell interaction when it is not the player's turn.
+   Gate cells remain clickable so players can always inspect gate values. */
 .game-board--disabled {
-  pointer-events: none;
   opacity: 0.75;
+}
+
+.game-board--disabled .bit-cell {
+  pointer-events: none;
 }
 
 @media (min-width: 600px) {

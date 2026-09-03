@@ -11,7 +11,7 @@ import {
   checkEquivalence,
   calculateScore,
 } from '@boolean-logic/shared';
-import type { EvaluationRound, EquivalenceRound } from '@boolean-logic/shared';
+import type { EvaluationRound, EquivalenceRound, FormulaNode } from '@boolean-logic/shared';
 
 import { FormulaDisplay, nodeToString } from './FormulaDisplay.js';
 import { VariableAssignmentDisplay }   from './VariableAssignmentDisplay.js';
@@ -32,8 +32,6 @@ import type {
   SessionPhase,
   RoundResultInfo,
   RoundRecord,
-  ServerToClientMessage,
-  ClientToServerMessage,
   FormulaNotation,
 } from './types.js';
 
@@ -46,6 +44,12 @@ const HouseIcon = () => (
     <polyline points="6.5,14 6.5,10.5 9.5,10.5 9.5,14" />
   </svg>
 );
+
+function extractVariables(node: FormulaNode): string[] {
+  if (node.type === 'variable') return [node.name];
+  if (node.type === 'not')      return extractVariables(node.operand);
+  return [...extractVariables(node.left), ...extractVariables(node.right)];
+}
 
 export function FormulaGameSession({
   gameType,
@@ -72,9 +76,16 @@ export function FormulaGameSession({
   const [notation, setNotation]           = useState<FormulaNotation>('mathematical');
 
   const [reviewRoundIndex, setReviewRoundIndex] = useState<number | null>(null);
+  // Online only: true once the local player has submitted and we are waiting
+  // for the opponent to submit (so the server can send formula:round_result).
+  const [submittedOnline,      setSubmittedOnline]      = useState(false);
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
-  const timerRef          = useRef(new TimerManager());
-  const pendingElapsedRef = useRef(0);
+  const timerRef             = useRef(new TimerManager());
+  const pendingElapsedRef    = useRef(0);
+  // Stores the active countdown interval ID so handleAnswer can clear it
+  // immediately, freezing the visual timer the moment the player submits.
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Tracks the player's answer for the current online round so it can be
   // stored in roundHistory when the server's round_result arrives.
   const pendingAnswerRef  = useRef<boolean | null>(null);
@@ -105,85 +116,99 @@ export function FormulaGameSession({
     setCurrentRound(round);
   }, [currentRound, phase, mode, gameType, difficulty]);
 
-  // ─── Online: handle incoming WebSocket messages ───────────────────────────
+  // ─── Online: handle incoming Socket.IO events ────────────────────────────
   useEffect(() => {
     if (mode !== 'online' || socket == null) return;
 
-    function onMessage(event: MessageEvent) {
-      const message = JSON.parse(event.data as string) as ServerToClientMessage;
+    socket.on('formula:round', (data) => {
+      answeredRef.current = false;
+      setPendingAnswer(null);
+      setSubmittedOnline(false);
 
-      switch (message.type) {
-        case 'round': {
-          answeredRef.current = false;
-          setPendingAnswer(null);
-
-          if (message.gameType === 'evaluation') {
-            const variables = Object.keys(message.assignment).sort();
-            setCurrentRound({
-              formula:       { root: message.formula, variables },
-              assignment:    message.assignment,
-              correctAnswer: false,   // unknown client-side; never used in online mode
-            } satisfies EvaluationRound);
-          } else {
-            setCurrentRound({
-              formulaA:      { root: message.formulaA, variables: [] },
-              formulaB:      { root: message.formulaB, variables: [] },
-              areEquivalent: false,   // unknown client-side; never used in online mode
-            } satisfies EquivalenceRound);
-          }
-
-          setRoundIndex(message.roundIndex);
-          setPhase('playing');
-          break;
-        }
-
-        case 'round_result': {
-          timerRef.current.stop();
-          const elapsed     = pendingElapsedRef.current;
-          const roundPoints = calculateScore(message.correct, elapsed);
-          setTotalScore(message.yourScore);
-          setLastResult({ correct: message.correct, points: roundPoints });
-
-          // Compute correct answers locally (they were placeholders in online mode)
-          // so the stored round can be used for review with a "Show Solution" button.
-          const prevRound = currentRoundRef.current;
-          if (prevRound !== null) {
-            let reviewRound: EvaluationRound | EquivalenceRound = prevRound;
-            if (gameType === 'evaluation') {
-              const evaluationRound = prevRound as EvaluationRound;
-              reviewRound = { ...evaluationRound, correctAnswer: evaluateFormula(evaluationRound.formula.root, evaluationRound.assignment) };
-            } else {
-              const equivalenceRound = prevRound as EquivalenceRound;
-              reviewRound = { ...equivalenceRound, areEquivalent: checkEquivalence(equivalenceRound.formulaA, equivalenceRound.formulaB) };
-            }
-            setRoundHistory(history => [...history, {
-              elapsed,
-              correct:      message.correct,
-              points:       roundPoints,
-              round:        reviewRound,
-              playerAnswer: pendingAnswerRef.current,
-              gameType,
-            }]);
-          }
-
-          setPhase('result');
-          break;
-        }
-
-        case 'opponent_score':
-          setOpponentScore(message.score);
-          break;
-
-        case 'session_end':
-          setTotalScore(message.yourFinalScore);
-          setOpponentScore(message.opponentFinalScore);
-          setPhase('ended');
-          break;
+      if (data.gameType === 'evaluation') {
+        const variables = Object.keys(data.assignment).sort();
+        setCurrentRound({
+          formula:       { root: data.formula, variables },
+          assignment:    data.assignment,
+          correctAnswer: false,   // unknown client-side; never used in online mode
+        } satisfies EvaluationRound);
+      } else {
+        setCurrentRound({
+          formulaA:      { root: data.formulaA, variables: [...new Set(extractVariables(data.formulaA))].sort() },
+          formulaB:      { root: data.formulaB, variables: [...new Set(extractVariables(data.formulaB))].sort() },
+          areEquivalent: false,   // unknown client-side; computed in formula:round_result
+          proof:         data.proof,
+        } satisfies EquivalenceRound);
       }
-    }
 
-    socket.addEventListener('message', onMessage);
-    return () => socket.removeEventListener('message', onMessage);
+      setRoundIndex(data.roundIndex);
+      setPhase('playing');
+    });
+
+    socket.on('formula:round_result', (data) => {
+      if (timerRef.current.isRunning()) timerRef.current.stop();
+      const elapsed     = pendingElapsedRef.current;
+      const roundPoints = calculateScore(data.correct, elapsed);
+      setTotalScore(data.yourScore);
+      setLastResult({ correct: data.correct, points: roundPoints });
+
+      // Compute correct answers locally (they were placeholders in online mode)
+      // so the stored round can be used for review with a "Show Solution" button.
+      const prevRound = currentRoundRef.current;
+      if (prevRound !== null) {
+        let reviewRound: EvaluationRound | EquivalenceRound = prevRound;
+        if (gameType === 'evaluation') {
+          const evaluationRound = prevRound as EvaluationRound;
+          reviewRound = { ...evaluationRound, correctAnswer: evaluateFormula(evaluationRound.formula.root, evaluationRound.assignment) };
+        } else {
+          const equivalenceRound = prevRound as EquivalenceRound;
+          reviewRound = { ...equivalenceRound, areEquivalent: checkEquivalence(equivalenceRound.formulaA, equivalenceRound.formulaB) };
+        }
+        setRoundHistory(history => [...history, {
+          elapsed,
+          correct:      data.correct,
+          points:       roundPoints,
+          round:        reviewRound,
+          playerAnswer: pendingAnswerRef.current,
+          gameType,
+        }]);
+      }
+
+      setPhase('result');
+    });
+
+    socket.on('formula:opponent_score', (data) => {
+      setOpponentScore(data.score);
+    });
+
+    socket.on('formula:session_end', (data) => {
+      setTotalScore(data.yourFinalScore);
+      setOpponentScore(data.opponentFinalScore);
+      setPhase('ended');
+    });
+
+    socket.on('opponent:disconnected', () => {
+      answeredRef.current = true;
+      if (countdownIntervalRef.current !== null) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      timerRef.current.stop();
+      setOpponentDisconnected(true);
+    });
+
+    // All listeners are registered — tell the server we are ready.
+    // The server will not emit formula:round until both players signal ready,
+    // preventing the race where the event arrives before this useEffect runs.
+    socket.emit('formula:ready');
+
+    return () => {
+      socket.off('formula:round');
+      socket.off('formula:round_result');
+      socket.off('formula:opponent_score');
+      socket.off('formula:session_end');
+      socket.off('opponent:disconnected');
+    };
   }, [mode, socket]);
 
   // ─── Countdown: starts when a round is ready and we are in playing phase ──
@@ -197,6 +222,7 @@ export function FormulaGameSession({
       setSecondsLeft(previousValue => {
         if (previousValue <= 1) {
           clearInterval(id);
+          countdownIntervalRef.current = null;
           setTimeout(() => handleAnswerRef.current(null), 1000);  // 1s pause at 0 before advancing
           return 0;
         }
@@ -204,7 +230,11 @@ export function FormulaGameSession({
       });
     }, 1000);
 
-    return () => clearInterval(id);
+    countdownIntervalRef.current = id;
+    return () => {
+      clearInterval(id);
+      countdownIntervalRef.current = null;
+    };
   }, [phase, currentRound]);
 
   // ─── Auto-advance after showing result (solo only) ────────────────────────
@@ -283,15 +313,22 @@ export function FormulaGameSession({
       setPhase('result');
 
     } else if (socket != null) {
+      // Freeze the visual countdown immediately so the player sees their
+      // submission time locked in while waiting for the opponent.
+      if (countdownIntervalRef.current !== null) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      setSubmittedOnline(true);
+
       // Online: record the answer so the round_result handler can store it
       pendingAnswerRef.current = answer;
-      // Send to server; phase transition is driven by 'round_result' message
-      const message: ClientToServerMessage = {
-        type:           'answer',
-        answer,
-        elapsedSeconds: elapsed,
-      };
-      socket.send(JSON.stringify(message));
+      // Emit to server; phase transition is driven by 'formula:round_result' event
+      if (gameType === 'evaluation') {
+        socket.emit('formula:evaluation_answer', { result: answer, elapsedSeconds: elapsed });
+      } else {
+        socket.emit('formula:equivalence_answer', { areEquivalent: answer, elapsedSeconds: elapsed });
+      }
     }
   }
 
@@ -351,7 +388,7 @@ export function FormulaGameSession({
         playerName={playerName}
         opponentName={opponentName}
         roundHistory={roundHistory}
-        onMenu={() => onSessionEnd(totalScore)}
+        onPlayAgain={onPlayAgain ?? (() => onSessionEnd(totalScore))}
         onReviewRound={setReviewRoundIndex}
         onBackToMenu={onBackToMenu}
         onHome={onHome}
@@ -360,7 +397,7 @@ export function FormulaGameSession({
   }
 
   // ─── Render: playing / showing result ────────────────────────────────────
-  const isAnswered = answeredRef.current || phase === 'result';
+  const isAnswered = answeredRef.current || phase === 'result' || opponentDisconnected;
 
   return (
     <div className="formula-game-session-container">
@@ -440,7 +477,8 @@ export function FormulaGameSession({
         )}
       </div>
 
-      {/* Result feedback (shown for 2 s after submission) */}
+      {/* Result feedback — shown for 2 s then auto-advances (solo) or until
+          the server sends the next formula:round event (online). */}
       {phase === 'result' && lastResult !== null && (
         <div className="formula-game-session-result-row">
           <RoundResult result={lastResult} />
@@ -463,6 +501,11 @@ export function FormulaGameSession({
         />
       )}
 
+      {/* Online: "submitted, waiting for opponent" indicator */}
+      {mode === 'online' && submittedOnline && phase === 'playing' && !opponentDisconnected && (
+        <p className="formula-game-waiting-msg">Waiting for opponent…</p>
+      )}
+
       {/* Draft pane — pre-filled with the round's formula; remounted each round via key */}
       {currentRound !== null && (
         <DraftPane
@@ -473,6 +516,23 @@ export function FormulaGameSession({
               : `A: ${nodeToString((currentRound as EquivalenceRound).formulaA.root, notation)} = \nB: ${nodeToString((currentRound as EquivalenceRound).formulaB.root, notation)} = `
           }
         />
+      )}
+
+      {opponentDisconnected && (
+        <div className="formula-game-disconnect-overlay">
+          <div className="formula-game-disconnect-modal">
+            <p className="formula-game-disconnect-title">Opponent Disconnected</p>
+            <p className="formula-game-disconnect-msg">Your opponent has left the game.</p>
+            <div className="formula-game-disconnect-actions">
+              {onBackToMenu !== undefined && (
+                <button className="game-back-btn" onClick={onBackToMenu}>← Back to Menu</button>
+              )}
+              {onHome !== undefined && (
+                <button className="home-btn" onClick={onHome}><HouseIcon /> Home</button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

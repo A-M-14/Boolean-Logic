@@ -233,13 +233,15 @@ const RULE_DISPLAY: Record<RuleKey, string> = {
  */
 
 type GenRewrite = {
-  newRoot:  FormulaNode;  // full formula after applying the rule
-  ruleName: string;       // display name for the proof step
-  ruleKey:  RuleKey;      // internal key for anti-reversal tracking
-  on:       FormulaNode;  // input subformula the rule was applied to
-  outputOn: FormulaNode;  // local result (what `on` became); used to build
-                          // the forbidden map for the next pass
-  weight:   number;
+  newRoot:   FormulaNode;  // full formula after applying the rule
+  ruleName:  string;       // display name for the proof step
+  ruleKey:   RuleKey;      // internal key for anti-reversal tracking
+  on:        FormulaNode;  // subformula shown in the proof chain (includes NOT
+                           // wrapper when the rule fires inside a negation)
+  trackedOn: FormulaNode;  // actual rule application site; keyed in forbidden map
+  outputOn:  FormulaNode;  // local result (what `trackedOn` became); used to build
+                           // the forbidden map for the next pass
+  weight:    number;
 };
 
 /**
@@ -261,14 +263,22 @@ function collectRewrites(
   difficulty: Difficulty,
   fullSize:   number,
   out:        GenRewrite[],
+  notParent:  FormulaNode | null = null,
 ): void {
+
+  // When this node sits directly inside a NOT and is not itself a NOT, show the
+  // NOT wrapper as the "on" subexpression so the proof chain displays the
+  // overline.  NOT nodes (De Morgan's, double-negation) already carry their own
+  // overline, so they never need an extra wrapper.
+  const displayOn = (notParent !== null && node.type !== 'not') ? notParent : node;
 
   const emit = (outputOn: FormulaNode, ruleKey: RuleKey, weight: number) => {
     out.push({
-      newRoot:  context(outputOn),
-      ruleName: RULE_DISPLAY[ruleKey],
+      newRoot:   context(outputOn),
+      ruleName:  RULE_DISPLAY[ruleKey],
       ruleKey,
-      on:       node,
+      on:        displayOn,
+      trackedOn: node,
       outputOn,
       weight,
     });
@@ -428,7 +438,9 @@ function collectRewrites(
 
   // ── Recurse into children ─────────────────────────────────────────────────
   if (node.type === 'not') {
-    collectRewrites(node.operand, n => context({ type: 'not', operand: n }), difficulty, fullSize, out);
+    // Pass `node` as notParent so rules firing directly on the operand get the
+    // NOT wrapper as their display `on` field.
+    collectRewrites(node.operand, n => context({ type: 'not', operand: n }), difficulty, fullSize, out, node);
   } else if (node.type === 'binary') {
     collectRewrites(node.left,  n => context({ ...node, left:  n }), difficulty, fullSize, out);
     collectRewrites(node.right, n => context({ ...node, right: n }), difficulty, fullSize, out);
@@ -486,7 +498,7 @@ function makeEquivalentWithProof(
 
     const valid = candidates.filter(r => {
       if (seen.has(serializeNode(r.newRoot))) return false;
-      const prevRules = forbidden.get(serializeNode(r.on));
+      const prevRules = forbidden.get(serializeNode(r.trackedOn));
       if (prevRules !== undefined && prevRules.has(RULE_INVERSE[r.ruleKey] as RuleKey)) return false;
       if (countBinaryOps(r.newRoot) > MAX_BINARY_OPS) return false;
       return true;

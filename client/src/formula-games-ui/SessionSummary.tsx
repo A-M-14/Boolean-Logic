@@ -28,7 +28,7 @@ type SessionSummaryProps =
       playerName:      string;
       opponentName:    string;
       roundHistory:    RoundRecord[];
-      onMenu:          () => void;
+      onPlayAgain:     () => void;
       onReviewRound?:  (index: number) => void;
       onBackToMenu?:   () => void;
       onHome?:         () => void;
@@ -143,8 +143,8 @@ export function SessionSummary(props: SessionSummaryProps) {
       </div>
       <RoundsTable rounds={props.roundHistory} onReviewRound={props.onReviewRound} />
       <div className="summary-actions">
-        <button className="summary-button secondary" onClick={props.onMenu}>
-          Menu
+        <button className="summary-button primary" onClick={props.onPlayAgain}>
+          Play Again
         </button>
       </div>
     </div>

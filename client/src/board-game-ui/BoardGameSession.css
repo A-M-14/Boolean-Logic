@@ -307,6 +307,18 @@
   color:        #e2e8f0;
 }
 
+/* ── Opponent disconnect overlay ─────────────────────────────────────────── */
+
+.board-game-session__disconnect-overlay {
+  position:        fixed;
+  inset:           0;
+  background:      rgba(0, 0, 0, 0.65);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  z-index:         50;
+}
+
 /* ── Solo mode: board fills the full viewport ─────────────────────────────── */
 
 .board-game-session--solo {

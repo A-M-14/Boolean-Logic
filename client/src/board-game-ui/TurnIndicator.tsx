@@ -26,7 +26,7 @@ export function TurnIndicator({
   } else if (boardMode === 'vs-computer') {
     label = isComputerTurn ? 'Computer is thinking\u2026' : 'Your turn';
   } else if (boardMode === 'online') {
-    label = currentPlayer === localPlayer ? `${playerName}\u2019s turn` : `${opponentName}\u2019s turn`;
+    label = currentPlayer === localPlayer ? 'Your turn' : `${opponentName}\u2019s turn`;
   } else {
     // one-on-one (local)
     label = currentPlayer === 'red' ? "Red\u2019s turn" : "Blue\u2019s turn";

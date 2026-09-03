@@ -277,6 +277,88 @@
   box-shadow: 0 4px 20px -4px #64ffda44;
 }
 
+/* ─── Nickname Screen ───────────────────────────────────────────────────────── */
+
+.nickname-screen {
+  display:        flex;
+  flex-direction: column;
+  align-items:    flex-start;
+  gap:            2rem;
+  max-width:      400px;
+  width:          100%;
+  animation:      fadeInUp 0.35s ease both;
+}
+
+.nickname-screen__body {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            1.25rem;
+  width:          100%;
+  text-align:     center;
+}
+
+.nickname-screen__title {
+  font-size:               2rem;
+  font-weight:             700;
+  margin:                  0;
+  background:              linear-gradient(135deg, #64ffda 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip:         text;
+}
+
+.nickname-screen__subtitle {
+  color:     #64748b;
+  font-size: 0.9rem;
+  margin:    0;
+}
+
+.nickname-screen__input {
+  width:         100%;
+  box-sizing:    border-box;
+  background:    #1e1b3a;
+  border:        1px solid #2d2a50;
+  border-radius: 10px;
+  color:         #e2e8f0;
+  font-size:     1.1rem;
+  font-family:   inherit;
+  padding:       0.75rem 1.25rem;
+  outline:       none;
+  transition:    border-color 0.18s, box-shadow 0.18s;
+  text-align:    center;
+}
+
+.nickname-screen__input::placeholder { color: #475569; }
+
+.nickname-screen__input:focus {
+  border-color: #64ffda;
+  box-shadow:   0 0 0 3px #64ffda18;
+}
+
+.nickname-screen__continue {
+  background:    #1e1b3a;
+  border:        1.5px solid #64ffda;
+  border-radius: 10px;
+  color:         #64ffda;
+  cursor:        pointer;
+  font-size:     0.95rem;
+  font-weight:   600;
+  padding:       0.7rem 2.5rem;
+  transition:    background 0.15s, box-shadow 0.15s, opacity 0.15s;
+  font-family:   inherit;
+}
+
+.nickname-screen__continue:hover:not(:disabled) {
+  background: #64ffda15;
+  box-shadow: 0 4px 20px -4px #64ffda44;
+}
+
+.nickname-screen__continue:disabled {
+  opacity: 0.35;
+  cursor:  not-allowed;
+}
+
 /* ─── Animations ────────────────────────────────────────────────────────────── */
 
 @keyframes fadeInUp {

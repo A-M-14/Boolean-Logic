@@ -1,6 +1,5 @@
+import type { Socket } from 'socket.io-client';
 import type {
-  FormulaNode,
-  VariableAssignment,
   Difficulty,
   EvaluationRound,
   EquivalenceRound,
@@ -25,7 +24,7 @@ export interface FormulaGameSessionProps {
   onHome?:        () => void;
   playerName:     string;
   // Online-only
-  socket?:        WebSocket;
+  socket?:        Socket;
   opponentName?:  string;
 }
 
@@ -42,30 +41,3 @@ export interface RoundRecord {
   playerAnswer: boolean | null;
   gameType:     GameType;
 }
-
-// ─── WebSocket protocol ───────────────────────────────────────────────────────
-// NOTE: These message shapes must be mirrored exactly by the server implementation.
-
-/** Messages sent from the server to the client. */
-export type ServerToClientMessage =
-  | {
-      type:       'round';
-      gameType:   'evaluation';
-      roundIndex: number;
-      formula:    FormulaNode;
-      assignment: VariableAssignment;
-    }
-  | {
-      type:       'round';
-      gameType:   'equivalence';
-      roundIndex: number;
-      formulaA:   FormulaNode;
-      formulaB:   FormulaNode;
-    }
-  | { type: 'round_result';  correct: boolean; yourScore: number }
-  | { type: 'opponent_score'; score: number }
-  | { type: 'session_end';   yourFinalScore: number; opponentFinalScore: number };
-
-/** Messages sent from the client to the server. */
-export type ClientToServerMessage =
-  | { type: 'answer'; answer: boolean; elapsedSeconds: number };
